@@ -1,0 +1,6 @@
+{
+  "name": "Our Story",
+  "description": "A Private Interactive Journey Through Two Years Together",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

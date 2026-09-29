@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "Chapter": {
+      "title": "Chapter",
+      "description": "A chapter in the couple's relationship.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "date": { "type": "string" },
+        "order": { "type": "number" },
+        "cover_image": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["title", "order"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "An individual memory belonging to a chapter.",
+      "type": "object",
+      "properties": {
+        "chapter_id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "date": { "type": "string" },
+        "location": { "type": "string", "maxLength": 200 },
+        "cover_media_id": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["chapter_id", "title", "date"]
+    },
+    "Media": {
+      "title": "Media",
+      "description": "Photos and videos for a memory.",
+      "type": "object",
+      "properties": {
+        "memory_id": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["image", "video"] },
+        "storage_path": { "type": "string", "maxLength": 500 },
+        "caption": { "type": "string", "maxLength": 500 },
+        "order": { "type": "number" }
+      },
+      "required": ["memory_id", "type", "storage_path"]
+    },
+    "Letter": {
+      "title": "Letter",
+      "description": "A personal letter that unlocks on a specific date.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 100 },
+        "content": { "type": "string", "maxLength": 10000 },
+        "unlock_date": { "type": "string" },
+        "chapter_id": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["title", "content", "unlock_date"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "Important standalone relationship events.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "image_url": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["title", "date"]
+    },
+    "LittleThing": {
+      "title": "LittleThing",
+      "description": "Short appreciation cards.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "maxLength": 500 },
+        "order": { "type": "number" },
+        "category": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["text"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile determining admin status.",
+      "type": "object",
+      "properties": {
+        "display_name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["admin", "viewer"] }
+      },
+      "required": ["role"]
+    }
+  },
+  "firestore": {
+    "chapters": {
+      "schema": { "$ref": "#/entities/Chapter" },
+      "description": "Chapters of the relationship story."
+    },
+    "memories": {
+      "schema": { "$ref": "#/entities/Memory" },
+      "description": "Memories within chapters."
+    },
+    "media": {
+      "schema": { "$ref": "#/entities/Media" },
+      "description": "Media items associated with memories."
+    },
+    "letters": {
+      "schema": { "$ref": "#/entities/Letter" },
+      "description": "Personal letters."
+    },
+    "milestones": {
+      "schema": { "$ref": "#/entities/Milestone" },
+      "description": "Relationship milestones."
+    },
+    "little_things": {
+      "schema": { "$ref": "#/entities/LittleThing" },
+      "description": "Little things I love about you."
+    },
+    "profiles": {
+      "schema": { "$ref": "#/entities/Profile" },
+      "description": "User profiles (access control)."
+    }
+  }
+}

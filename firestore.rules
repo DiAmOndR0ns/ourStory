@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+             && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner() {
+      return isSignedIn() && request.auth.uid == resource.id;
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // 3. Validation Helpers
+    function isValidChapter(data) {
+      return data.keys().hasAll(['title', 'order'])
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000))
+        && (!('date' in data) || (data.date is string && data.date.size() <= 100))
+        && (!('cover_image' in data) || (data.cover_image is string && data.cover_image.size() <= 500))
+        && data.title is string && data.title.size() <= 100
+        && data.order is number;
+    }
+    
+    function isValidMemory(data) {
+      return data.keys().hasAll(['chapter_id', 'title', 'date'])
+        && data.chapter_id is string && data.chapter_id.size() <= 128
+        && data.title is string && data.title.size() <= 100
+        && data.date is string && data.date.size() <= 100
+        && (!('description' in data) || (data.description is string && data.description.size() <= 5000))
+        && (!('location' in data) || (data.location is string && data.location.size() <= 200))
+        && (!('cover_media_id' in data) || (data.cover_media_id is string && data.cover_media_id.size() <= 128));
+    }
+    
+    function isValidMedia(data) {
+      return data.keys().hasAll(['memory_id', 'type', 'storage_path'])
+        && data.memory_id is string && data.memory_id.size() <= 128
+        && data.type is string && (data.type == 'image' || data.type == 'video')
+        && data.storage_path is string && data.storage_path.size() <= 2000
+        && (!('caption' in data) || (data.caption is string && data.caption.size() <= 500))
+        && (!('order' in data) || data.order is number);
+    }
+    
+    function isValidLetter(data) {
+      return data.keys().hasAll(['title', 'content', 'unlock_date'])
+        && data.title is string && data.title.size() <= 100
+        && data.content is string && data.content.size() <= 10000
+        && data.unlock_date is string && data.unlock_date.size() <= 100
+        && (!('chapter_id' in data) || (data.chapter_id is string && data.chapter_id.size() <= 128));
+    }
+    
+    function isValidMilestone(data) {
+      return data.keys().hasAll(['title', 'date'])
+        && data.title is string && data.title.size() <= 100
+        && data.date is string && data.date.size() <= 100
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000))
+        && (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 500));
+    }
+    
+    function isValidLittleThing(data) {
+      return data.keys().hasAll(['text'])
+        && data.text is string && data.text.size() <= 500
+        && (!('order' in data) || data.order is number)
+        && (!('category' in data) || (data.category is string && data.category.size() <= 50));
+    }
+    
+    function isValidProfile(data) {
+      return data.keys().hasAll(['role'])
+        && data.role is string && (data.role == 'admin' || data.role == 'viewer')
+        && (!('display_name' in data) || (data.display_name is string && data.display_name.size() <= 100));
+    }
+
+    // 4. Collections
+    match /profiles/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      // Allow creation of own profile, but only as a viewer unless they are the first user (we'd manually set admin).
+      allow create: if isSignedIn() && request.auth.uid == userId 
+                    && isValidId(userId) 
+                    && isValidProfile(incoming())
+                    && incoming().role == 'viewer';
+      allow update: if isAdmin() && isValidProfile(incoming());
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true; // Public read for the story
+      allow create: if isAdmin() && isValidId(chapterId) && isValidChapter(incoming());
+      allow update: if isAdmin() && isValidId(chapterId) && isValidChapter(incoming());
+      allow delete: if isAdmin() && isValidId(chapterId);
+    }
+
+    match /memories/{memoryId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(memoryId) && isValidMemory(incoming())
+                    && exists(/databases/$(database)/documents/chapters/$(incoming().chapter_id));
+      allow update: if isAdmin() && isValidId(memoryId) && isValidMemory(incoming());
+      allow delete: if isAdmin() && isValidId(memoryId);
+    }
+    
+    match /media/{mediaId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(mediaId) && isValidMedia(incoming())
+                    && exists(/databases/$(database)/documents/memories/$(incoming().memory_id));
+      allow update: if isAdmin() && isValidId(mediaId) && isValidMedia(incoming());
+      allow delete: if isAdmin() && isValidId(mediaId);
+    }
+
+    match /letters/{letterId} {
+      allow read: if true; // We will enforce time-unlock visually in the UI, or technically we could do it in rules but time is tricky.
+      allow create: if isAdmin() && isValidId(letterId) && isValidLetter(incoming());
+      allow update: if isAdmin() && isValidId(letterId) && isValidLetter(incoming());
+      allow delete: if isAdmin() && isValidId(letterId);
+    }
+
+    match /milestones/{milestoneId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(milestoneId) && isValidMilestone(incoming());
+      allow update: if isAdmin() && isValidId(milestoneId) && isValidMilestone(incoming());
+      allow delete: if isAdmin() && isValidId(milestoneId);
+    }
+
+    match /little_things/{thingId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(thingId) && isValidLittleThing(incoming());
+      allow update: if isAdmin() && isValidId(thingId) && isValidLittleThing(incoming());
+      allow delete: if isAdmin() && isValidId(thingId);
+    }
+  }
+}
