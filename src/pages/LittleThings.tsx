@@ -1,7 +1,6 @@
 import { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, orderBy, getDocs, addDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { motion, AnimatePresence } from "motion/react";
 import { Heart, Sparkles, Plus, X, ArrowLeft } from "lucide-react";
 
@@ -83,14 +82,17 @@ export default function LittleThings() {
   useEffect(() => {
     async function fetchThings() {
       try {
-        const q = query(collection(db, "little_things"), orderBy("order", "asc"));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LittleThing));
-        if (data.length > 0) {
-          setThings(data);
-        } else {
-          setThings(DEFAULT_LITTLE_THINGS);
+        if (isSupabaseConfigured()) {
+          const { data, error } = await supabase
+            .from("little_things")
+            .select("*")
+            .order("order", { ascending: true });
+          if (!error && data && data.length > 0) {
+            setThings(data as LittleThing[]);
+            return;
+          }
         }
+        setThings(DEFAULT_LITTLE_THINGS);
       } catch (error) {
         console.warn("Using default little things:", error);
         setThings(DEFAULT_LITTLE_THINGS);
@@ -113,16 +115,17 @@ export default function LittleThings() {
       order: things.length + 1
     };
 
-    try {
-      const docRef = await addDoc(collection(db, "little_things"), {
-        text: newThing.text,
-        category: newThing.category,
-        order: newThing.order,
-        created_at: new Date().toISOString()
-      });
-      newThing.id = docRef.id;
-    } catch (err) {
-      console.warn("Saved locally for session:", err);
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("little_things").upsert({
+          id: newThing.id,
+          text: newThing.text,
+          category: newThing.category,
+          order: newThing.order
+        });
+      } catch (err) {
+        console.warn("Supabase insert warning, saved locally:", err);
+      }
     }
 
     setThings(prev => [newThing, ...prev]);

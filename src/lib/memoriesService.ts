@@ -1,5 +1,4 @@
-import { collection, addDoc, getDocs, doc, getDoc, query, orderBy, deleteDoc, where } from "firebase/firestore";
-import { db } from "./firebase";
+import { supabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_MEMORIES, DEFAULT_CHAPTERS } from "../data/defaultStoryData";
 import { MemoryItem, MediaItem } from "../types";
 
@@ -211,50 +210,39 @@ export function isMemoryDeleted(id: string): boolean {
 
 /**
  * Fetches all memories across:
- * 1. Remote Firestore
+ * 1. Remote Supabase (if configured)
  * 2. Local User Storage Cache
  * 3. Default Curated Memories
  */
 export async function getAllMemories(): Promise<MemoryItem[]> {
   const remoteMemories: MemoryItem[] = [];
 
-  // 1. Fetch from Firestore if accessible
-  try {
-    const memQuery = query(collection(db, "memories"), orderBy("date", "asc"));
-    const memSnap = await getDocs(memQuery);
-    if (!memSnap.empty) {
-      for (const d of memSnap.docs) {
-        const data = d.data();
-        let mediaItems: MediaItem[] = data.media || [];
+  // 1. Fetch from Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("memories")
+        .select("*")
+        .order("created_at", { ascending: true });
 
-        // Check if media collection has items for this memory
-        try {
-          const mediaQ = collection(db, "media");
-          const mediaSnap = await getDocs(mediaQ);
-          const relatedMedia = mediaSnap.docs
-            .map(m => ({ id: m.id, ...m.data() } as MediaItem))
-            .filter(m => m.memory_id === d.id);
-          if (relatedMedia.length > 0) {
-            mediaItems = relatedMedia.sort((a, b) => (a.order || 0) - (b.order || 0));
-          }
-        } catch {
-          // Ignore media query error, fall back to embedded media
+      if (!error && data && data.length > 0) {
+        for (const row of data) {
+          const mediaItems: MediaItem[] = Array.isArray(row.media) ? row.media : [];
+          remoteMemories.push({
+            id: row.id,
+            chapter_id: row.chapter_id || "chapter-1",
+            title: row.title || "Cherished Memory",
+            description: row.description || "",
+            date: row.date || "November 2024",
+            location: row.location || "",
+            song: row.song || undefined,
+            media: mediaItems
+          });
         }
-
-        remoteMemories.push({
-          id: d.id,
-          chapter_id: data.chapter_id || "chapter-1",
-          title: data.title || "Cherished Memory",
-          description: data.description || "",
-          date: data.date || "November 2024",
-          location: data.location || "",
-          song: data.song,
-          media: mediaItems
-        });
       }
+    } catch (err) {
+      console.warn("Supabase memories fetch skipped or failed (falling back to cache):", err);
     }
-  } catch (err) {
-    console.warn("Remote Firestore memories fetch skipped or failed (using cached/default):", err);
   }
 
   // 2. Fetch local storage memories
@@ -266,7 +254,7 @@ export async function getAllMemories(): Promise<MemoryItem[]> {
     defaultList.push(...list);
   });
 
-  // 4. Merge without duplicates (Priority: Local User Created > Remote Firestore > Defaults)
+  // 4. Merge without duplicates (Priority: Local User Created > Remote Supabase > Defaults)
   const memoryMap = new Map<string, MemoryItem>();
 
   defaultList.forEach(m => memoryMap.set(m.id, m));
@@ -313,25 +301,30 @@ export async function getMemoryById(id: string): Promise<MemoryItem | null> {
     if (match) return match;
   }
 
-  // Check Firestore
-  try {
-    const docRef = doc(db, "memories", id);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const data = snap.data();
-      return {
-        id: snap.id,
-        chapter_id: data.chapter_id || "chapter-1",
-        title: data.title || "Memory",
-        description: data.description || "",
-        date: data.date || "",
-        location: data.location || "",
-        song: data.song,
-        media: data.media || []
-      };
+  // Check Supabase
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from("memories")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          chapter_id: data.chapter_id || "chapter-1",
+          title: data.title || "Memory",
+          description: data.description || "",
+          date: data.date || "",
+          location: data.location || "",
+          song: data.song || undefined,
+          media: Array.isArray(data.media) ? data.media : []
+        };
+      }
+    } catch {
+      // Ignore
     }
-  } catch {
-    // Ignore
   }
 
   return null;
@@ -367,32 +360,48 @@ export async function saveNewMemory(
   }
   saveLocalUserMemories(localList);
 
-  // 2. Write to Firestore in background / async
-  try {
-    const docRef = await addDoc(collection(db, "memories"), {
-      chapter_id: memoryToSave.chapter_id,
-      title: memoryToSave.title,
-      description: memoryToSave.description,
-      date: memoryToSave.date,
-      location: memoryToSave.location || "",
-      created_at: new Date().toISOString()
-    });
+  // 2. Write to Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      // Ensure chapter exists in DB
+      await supabase.from("chapters").upsert({
+        id: memoryToSave.chapter_id,
+        title: `Chapter ${memoryToSave.chapter_id}`,
+        order: 1
+      }, { onConflict: "id" });
 
-    // If media items exist, save them
-    if (memoryToSave.media && memoryToSave.media.length > 0) {
-      for (const item of memoryToSave.media) {
-        await addDoc(collection(db, "media"), {
-          memory_id: docRef.id,
-          type: item.type,
-          storage_path: item.storage_path,
-          caption: item.caption || "",
-          order: item.order || 1,
-          film_type: item.film_type || "Polaroid"
-        });
+      const { error } = await supabase.from("memories").upsert({
+        id: memoryToSave.id,
+        chapter_id: memoryToSave.chapter_id,
+        title: memoryToSave.title,
+        description: memoryToSave.description,
+        date: memoryToSave.date,
+        location: memoryToSave.location || "",
+        song: memoryToSave.song || null,
+        media: memoryToSave.media || []
+      }, { onConflict: "id" });
+
+      if (error) {
+        console.warn("Supabase memory upsert error:", error);
       }
+
+      // Also record media items in the dedicated media table if present
+      if (memoryToSave.media && memoryToSave.media.length > 0) {
+        for (const item of memoryToSave.media) {
+          await supabase.from("media").upsert({
+            id: item.id || `media-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            memory_id: memoryToSave.id,
+            type: item.type,
+            storage_path: item.storage_path,
+            caption: item.caption || "",
+            order: item.order || 1,
+            film_type: item.film_type || "Polaroid"
+          }, { onConflict: "id" });
+        }
+      }
+    } catch (err) {
+      console.warn("Remote Supabase write skipped or failed (local cache preserved):", err);
     }
-  } catch (err) {
-    console.warn("Remote Firestore write skipped or failed (local cache preserved):", err);
   }
 
   // 3. Dispatch event to notify all components
@@ -404,7 +413,7 @@ export async function saveNewMemory(
 }
 
 /**
- * Deletes a memory permanently across local cache, Firestore, and memory views
+ * Deletes a memory permanently across local cache, Supabase, and memory views
  */
 export async function deleteMemory(memoryId: string): Promise<boolean> {
   if (!memoryId) return false;
@@ -418,22 +427,14 @@ export async function deleteMemory(memoryId: string): Promise<boolean> {
   const localList = getLocalUserMemories().filter(m => m.id !== memoryId);
   saveLocalUserMemories(localList);
 
-  // 3. Delete from Firestore if exists
-  try {
-    await deleteDoc(doc(db, "memories", memoryId));
-    
-    // Also clean up any associated media documents
+  // 3. Delete from Supabase if configured
+  if (isSupabaseConfigured()) {
     try {
-      const mediaQ = query(collection(db, "media"), where("memory_id", "==", memoryId));
-      const mediaSnap = await getDocs(mediaQ);
-      for (const d of mediaSnap.docs) {
-        await deleteDoc(d.ref);
-      }
-    } catch (mediaErr) {
-      console.warn("Could not clean up remote media for memory:", mediaErr);
+      await supabase.from("memories").delete().eq("id", memoryId);
+      await supabase.from("media").delete().eq("memory_id", memoryId);
+    } catch (err) {
+      console.warn("Supabase memory deletion skipped:", err);
     }
-  } catch (err) {
-    console.warn("Firestore memory deletion skipped or non-existent:", err);
   }
 
   // 4. Notify all components to re-render
@@ -482,9 +483,7 @@ export function buildMonthlyJourney(
   const buckets: MonthTimelineBucket[] = [];
 
   for (let year = startYear; year <= endYear; year++) {
-    // 2026 stops after November (the 2-year anniversary milestone!)
     const maxMonth = year === 2026 ? 11 : 12;
-    // 2024 starts from January (user requested: "upload at least one memory per month since 2024")
     const minMonth = 1;
 
     for (let month = minMonth; month <= maxMonth; month++) {
@@ -492,18 +491,15 @@ export function buildMonthlyJourney(
       const monthName = MONTH_NAMES[month - 1];
       const label = `${monthName} ${year}`;
 
-      // Calculate Season
       let season: "Winter" | "Spring" | "Summer" | "Autumn" = "Winter";
       if (month >= 3 && month <= 5) season = "Spring";
       else if (month >= 6 && month <= 8) season = "Summer";
       else if (month >= 9 && month <= 11) season = "Autumn";
 
-      // Chapter mapping
       const { chapterId, chapterOrder } = inferChapterIdFromDate(`${monthName} 15, ${year}`);
       const matchedChapter = DEFAULT_CHAPTERS.find(c => c.id === chapterId || c.order === chapterOrder);
       const chapterTitle = matchedChapter ? matchedChapter.title : `Chapter ${chapterOrder}`;
 
-      // Check for milestones
       let isSpecialMilestone = false;
       let milestoneTitle: string | undefined;
 
@@ -520,7 +516,6 @@ export function buildMonthlyJourney(
         milestoneTitle = "Day 100 Milestone";
       }
 
-      // Find all memories that belong to this year and month
       const monthMemories = memories.filter(m => {
         const parsed = parseMemoryDate(m.date);
         return parsed.year === year && parsed.month === month;

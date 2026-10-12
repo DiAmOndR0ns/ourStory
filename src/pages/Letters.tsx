@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, getDocs } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { motion } from "motion/react";
 import { Lock, MailOpen, ArrowLeft, Sparkles, Heart } from "lucide-react";
 
@@ -17,7 +16,7 @@ const DEFAULT_LETTERS: Letter[] = [
   {
     id: "let-1",
     title: "To The Girl Who Painted My World in Every Shade of Blue",
-    unlock_date: "November 2, 2024",
+    unlock_date: "November 3, 2024",
     theme_tag: "Shades of Blue",
     content: `My dearest,
 
@@ -30,7 +29,7 @@ Thank you for making our little corner of the world so deeply beautiful.`
   {
     id: "let-2",
     title: "Our Ohana Promise • Experiment 626",
-    unlock_date: "November 2, 2025",
+    unlock_date: "November 3, 2025",
     theme_tag: "Stitch & Ohana",
     content: `My favorite human,
 
@@ -43,7 +42,7 @@ Through every high and every quiet low, I promise to always stand by your side. 
   {
     id: "let-3",
     title: "The Two-Year Anniversary Letter",
-    unlock_date: "November 2, 2026",
+    unlock_date: "November 3, 2026",
     theme_tag: "Anniversary Time Capsule",
     content: `Happy Two Years, my love.
 
@@ -63,14 +62,14 @@ export default function Letters() {
   useEffect(() => {
     async function fetchLetters() {
       try {
-        const q = query(collection(db, "letters"));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Letter));
-        if (data.length > 0) {
-          setLetters(data);
-        } else {
-          setLetters(DEFAULT_LETTERS);
+        if (isSupabaseConfigured()) {
+          const { data, error } = await supabase.from("letters").select("*");
+          if (!error && data && data.length > 0) {
+            setLetters(data as Letter[]);
+            return;
+          }
         }
+        setLetters(DEFAULT_LETTERS);
       } catch (error) {
         console.warn("Using default letters:", error);
         setLetters(DEFAULT_LETTERS);

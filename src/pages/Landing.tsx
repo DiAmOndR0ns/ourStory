@@ -5,8 +5,8 @@ import { Heart, Sparkles, Compass } from "lucide-react";
 import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { useBlueTheme } from "../lib/themeContext";
 
-const ANNIVERSARY_DATE = new Date("2026-11-02T00:00:00");
-const START_DATE = new Date("2024-11-02T00:00:00");
+const ANNIVERSARY_DATE = new Date("2026-11-03T00:00:00");
+const START_DATE = new Date("2024-11-03T00:00:00");
 
 export default function Landing() {
   const [now, setNow] = useState(new Date());
@@ -60,7 +60,7 @@ export default function Landing() {
           Our Story
         </h1>
         <p className="text-xs sm:text-sm tracking-widest uppercase text-sky-900/60 mb-8 font-sans font-medium">
-          Under every shade of blue since November 2, 2024
+          Under every shade of blue since November 3, 2024
         </p>
 
         {/* Ohana Quote Motto */}
@@ -76,12 +76,12 @@ export default function Landing() {
         {isAnniversary ? (
           <div className="mb-12">
             <h2 className="font-serif text-3xl italic text-blue-950 mb-2">Happy Two Years, My Love.</h2>
-            <p className="text-xs uppercase tracking-widest text-sky-600">November 2, 2026 • 730 Days of Us</p>
+            <p className="text-xs uppercase tracking-widest text-sky-600">November 3, 2026 • 730 Days of Us</p>
           </div>
         ) : (
           <div className="mb-12">
             <p className="text-xs font-semibold tracking-widest text-sky-800/70 uppercase mb-4 font-mono">
-              Countdown to Two Years • November 2, 2026
+              Countdown to Two Years • November 3, 2026
             </p>
             <div className="grid grid-cols-4 gap-2.5 sm:gap-4 max-w-md mx-auto">
               <div className="bg-white/80 backdrop-blur-xs border border-sky-100 p-3 sm:p-4 rounded-2xl shadow-xs">

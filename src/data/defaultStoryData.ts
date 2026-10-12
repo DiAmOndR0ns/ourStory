@@ -5,7 +5,7 @@ export const DEFAULT_CHAPTERS: ChapterItem[] = [
     id: "chapter-1",
     order: 1,
     title: "The Beginning",
-    date: "November 2, 2024",
+    date: "November 3, 2024",
     description: "The spark that started it all. Nervous first hellos, late-night coffees, and the moment we knew something special was happening.",
     cover_image: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=1200&auto=format&fit=crop",
     highlight_count: 3
@@ -41,7 +41,7 @@ export const DEFAULT_CHAPTERS: ChapterItem[] = [
     id: "chapter-5",
     order: 5,
     title: "One Year",
-    date: "November 2, 2025",
+    date: "November 3, 2025",
     description: "365 days of laughter, warmth, and quiet certainty. Celebrating our first full trip around the sun together.",
     cover_image: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1200&auto=format&fit=crop",
     highlight_count: 3
@@ -49,8 +49,8 @@ export const DEFAULT_CHAPTERS: ChapterItem[] = [
   {
     id: "chapter-6",
     order: 6,
-    title: "Two Years — November 2, 2026",
-    date: "November 2, 2026",
+    title: "Two Years — November 3, 2026",
+    date: "November 3, 2026",
     description: "Two complete years of being each other's home. Our biggest milestone yet, and the prologue to all the adventures waiting ahead.",
     cover_image: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1200&auto=format&fit=crop",
     highlight_count: 2
@@ -63,7 +63,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
       id: "mem-101",
       chapter_id: "chapter-1",
       title: "Our Very First Conversation",
-      date: "November 2, 2024",
+      date: "November 3, 2024",
       location: "Corner Cafe on Hayes St",
       description: "We intended to only grab a quick 30-minute espresso, but ended up sitting at that tiny wooden corner table for over four hours until the cafe staff started turning off the lights.",
       song: {
@@ -77,7 +77,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?q=80&w=1000&auto=format&fit=crop",
           caption: "The little table near the window where hours felt like minutes.",
-          date: "Nov 2, 2024",
+          date: "Nov 3, 2024",
           film_type: "35mm Grain"
         },
         {
@@ -86,7 +86,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=1000&auto=format&fit=crop",
           caption: "Two untouched cold brews because we couldn't stop talking.",
-          date: "Nov 2, 2024",
+          date: "Nov 3, 2024",
           film_type: "Warm Polaroid"
         },
         {
@@ -95,7 +95,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?q=80&w=1000&auto=format&fit=crop",
           caption: "Walking down the street afterwards under the autumn streetlamps.",
-          date: "Nov 2, 2024",
+          date: "Nov 3, 2024",
           film_type: "Night Snapshot"
         }
       ]
@@ -359,7 +359,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
       id: "mem-501",
       chapter_id: "chapter-5",
       title: "365 Days Together",
-      date: "November 2, 2025",
+      date: "November 3, 2025",
       location: "Rooftop Conservatory",
       description: "One year of us. We exchanged handwritten letters and re-read our first messages to each other from exactly one year prior.",
       song: {
@@ -373,7 +373,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=1000&auto=format&fit=crop",
           caption: "Candlelight, warm laughter, and our anniversary toast.",
-          date: "Nov 2, 2025",
+          date: "Nov 3, 2025",
           film_type: "Polaroid"
         },
         {
@@ -382,7 +382,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=1000&auto=format&fit=crop",
           caption: "The envelope sealed with red wax holding our 1-year vows.",
-          date: "Nov 2, 2025",
+          date: "Nov 3, 2025",
           film_type: "35mm Grain"
         }
       ]
@@ -393,7 +393,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
       id: "mem-601",
       chapter_id: "chapter-6",
       title: "The Second Anniversary Milestone",
-      date: "November 2, 2026",
+      date: "November 3, 2026",
       location: "Where It All Began",
       description: "730 days of shared dreams, milestones, unconditional support, and infinite love. Here's to everything we've been, everything we are, and everything that's still waiting for us.",
       song: {
@@ -407,7 +407,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?q=80&w=1000&auto=format&fit=crop",
           caption: "Two years of golden memories.",
-          date: "Nov 2, 2026",
+          date: "Nov 3, 2026",
           film_type: "Memory Film"
         },
         {
@@ -416,7 +416,7 @@ export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
           type: "image",
           storage_path: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?q=80&w=1000&auto=format&fit=crop",
           caption: "Walking toward the horizon together.",
-          date: "Nov 2, 2026",
+          date: "Nov 3, 2026",
           film_type: "Cinematic Still"
         }
       ]

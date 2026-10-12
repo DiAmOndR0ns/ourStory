@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, 
@@ -15,7 +14,7 @@ import {
   Plus, 
   Sparkles, 
   Heart, 
-  ImageIcon,
+  ImageIcon, 
   Trash2
 } from "lucide-react";
 import SwipeableGallery from "../components/SwipeableGallery";
@@ -45,14 +44,19 @@ export default function Chapter() {
     try {
       // 1. Fetch Chapter
       let chapterData: ChapterItem | null = null;
-      try {
-        const docRef = doc(db, "chapters", chapterId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          chapterData = { id: docSnap.id, ...docSnap.data() } as ChapterItem;
+      if (isSupabaseConfigured()) {
+        try {
+          const { data, error } = await supabase
+            .from("chapters")
+            .select("*")
+            .eq("id", chapterId)
+            .single();
+          if (!error && data) {
+            chapterData = data as ChapterItem;
+          }
+        } catch {
+          // Fallback to default
         }
-      } catch {
-        // Fallback to default
       }
 
       if (!chapterData) {

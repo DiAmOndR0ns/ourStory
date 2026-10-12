@@ -1,6 +1,5 @@
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../lib/firebase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { 
   Upload, 
   Video, 
@@ -12,7 +11,6 @@ import {
   Link as LinkIcon,
   Film
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 
 export interface UploadedMediaResult {
   type: "image" | "video";
@@ -88,47 +86,58 @@ export default function MediaUploader({
     const localBlobUrl = URL.createObjectURL(file);
     setPreviewUrl(localBlobUrl);
 
-    // Initiate Firebase Storage upload
     setUploading(true);
-    setProgress(0);
+    setProgress(30);
 
     const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
-    const storagePath = `memories/${detectedType}s/${uniqueId}_${sanitizedName}`;
-    const storageReference = ref(storage, storagePath);
+    const storagePath = `${detectedType}s/${uniqueId}_${sanitizedName}`;
 
-    try {
-      const uploadTask = uploadBytesResumable(storageReference, file);
+    // If Supabase is configured, upload to Supabase Storage bucket 'memories'
+    if (isSupabaseConfigured()) {
+      try {
+        setProgress(60);
+        const { data, error } = await supabase.storage
+          .from("memories")
+          .upload(storagePath, file, {
+            cacheControl: "3600",
+            upsert: true
+          });
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          setProgress(pct);
-        },
-        (error) => {
-          console.warn("Firebase Storage upload fallback (using local object stream):", error);
-          // Graceful fallback to local blob URL if cloud bucket is restricted
+        if (error) {
+          console.warn("Supabase Storage upload warning:", error);
+          setErrorMsg(
+            error.message.includes("Bucket not found")
+              ? "Storage bucket 'memories' not found in Supabase. Run the SQL script in Admin to create it!"
+              : `Supabase Storage note: ${error.message} (Using local preview)`
+          );
+          // Fall back gracefully to local object URL
           setUploading(false);
           setProgress(100);
           notifyParent(localBlobUrl, detectedType, file.name, file.size);
-        },
-        async () => {
-          try {
-            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            setUploading(false);
-            setProgress(100);
-            notifyParent(downloadUrl, detectedType, file.name, file.size);
-          } catch {
-            setUploading(false);
-            notifyParent(localBlobUrl, detectedType, file.name, file.size);
-          }
+          return;
         }
-      );
-    } catch (err) {
-      console.warn("Error initiating upload, using direct blob URL:", err);
-      setUploading(false);
+
+        // Get public URL from Supabase
+        const { data: urlData } = supabase.storage
+          .from("memories")
+          .getPublicUrl(data.path);
+
+        const finalUrl = urlData.publicUrl || localBlobUrl;
+        setPreviewUrl(finalUrl);
+        setUploading(false);
+        setProgress(100);
+        notifyParent(finalUrl, detectedType, file.name, file.size);
+      } catch (err: any) {
+        console.warn("Supabase upload exception:", err);
+        setUploading(false);
+        setProgress(100);
+        notifyParent(localBlobUrl, detectedType, file.name, file.size);
+      }
+    } else {
+      // Supabase credentials not set yet, use local preview and notify
       setProgress(100);
+      setUploading(false);
       notifyParent(localBlobUrl, detectedType, file.name, file.size);
     }
   };
@@ -223,7 +232,7 @@ export default function MediaUploader({
 
         <div className="flex items-center gap-1.5 text-[11px] text-stone-400">
           <Film className="w-3 h-3 text-rose-400" />
-          <span>Supports Video & Photo</span>
+          <span>Supabase Storage Ready</span>
         </div>
       </div>
 
@@ -278,7 +287,7 @@ export default function MediaUploader({
               <button
                 type="button"
                 onClick={handleReset}
-                className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
+                className="absolute top-3 right-3 z-20 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
                 title="Remove media"
               >
                 <X className="w-4 h-4" />
@@ -314,7 +323,7 @@ export default function MediaUploader({
                   <div className="flex items-center justify-between text-xs text-stone-600">
                     <span className="flex items-center gap-1.5 font-medium">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
-                      Uploading to cloud storage...
+                      Uploading to Supabase Storage...
                     </span>
                     <span className="font-mono text-[11px]">{progress}%</span>
                   </div>
@@ -334,7 +343,7 @@ export default function MediaUploader({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-[11px] font-semibold text-rose-600 hover:underline uppercase tracking-wider"
+                    className="text-[11px] font-semibold text-rose-600 hover:underline uppercase tracking-wider cursor-pointer"
                   >
                     Change
                   </button>
@@ -361,7 +370,7 @@ export default function MediaUploader({
               type="button"
               onClick={handleManualUrlSubmit}
               disabled={!manualUrl.trim()}
-              className="px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-semibold tracking-wider uppercase hover:bg-stone-800 disabled:opacity-50"
+              className="px-4 py-2 bg-stone-900 text-white rounded-xl text-xs font-semibold tracking-wider uppercase hover:bg-stone-800 disabled:opacity-50 cursor-pointer"
             >
               Load
             </button>
@@ -372,7 +381,7 @@ export default function MediaUploader({
               <button
                 type="button"
                 onClick={handleReset}
-                className="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-black/60 text-white"
+                className="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-black/60 text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -32,18 +31,21 @@ export default function Story() {
     try {
       // 1. Fetch chapters
       let chapterList = DEFAULT_CHAPTERS;
-      try {
-        const q = query(collection(db, "chapters"), orderBy("order", "asc"));
-        const snapshot = await getDocs(q);
-        const remoteChapters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChapterItem));
-        if (remoteChapters.length > 0) {
-          chapterList = remoteChapters.map((d, i) => ({
-            ...DEFAULT_CHAPTERS[i],
-            ...d
-          }));
+      if (isSupabaseConfigured()) {
+        try {
+          const { data, error } = await supabase
+            .from("chapters")
+            .select("*")
+            .order("order", { ascending: true });
+          if (!error && data && data.length > 0) {
+            chapterList = data.map((d, i) => ({
+              ...DEFAULT_CHAPTERS[i],
+              ...d
+            }));
+          }
+        } catch (err) {
+          console.warn("Using default chapters:", err);
         }
-      } catch (err) {
-        console.warn("Using default chapters:", err);
       }
       setChapters(chapterList);
 

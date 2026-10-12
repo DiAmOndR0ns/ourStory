@@ -45,7 +45,7 @@ const MILESTONES: TimelineMilestone[] = [
   {
     dayNumber: 1,
     label: "Day 1 • The First Spark",
-    dateStr: "Nov 2, 2024",
+    dateStr: "Nov 3, 2024",
     season: "Autumn 2024",
     monthKey: "2024-11",
     description: "The coffee that turned into hours of endless talking. Under a crisp autumn blue sky, where our universe began.",
@@ -73,7 +73,7 @@ const MILESTONES: TimelineMilestone[] = [
   {
     dayNumber: 365,
     label: "Day 365 • One Full Year",
-    dateStr: "Nov 2, 2025",
+    dateStr: "Nov 3, 2025",
     season: "Autumn 2025",
     monthKey: "2025-11",
     description: "365 days of unconditional warmth, sealed letters, and our first official anniversary milestone.",
@@ -82,7 +82,7 @@ const MILESTONES: TimelineMilestone[] = [
   {
     dayNumber: 500,
     label: "Day 500 • Half a Thousand Days",
-    dateStr: "March 17, 2026",
+    dateStr: "March 18, 2026",
     season: "Spring 2026",
     monthKey: "2026-03",
     description: "Over five hundred sunrises waking up knowing you are in my corner, through every shade of life.",
@@ -91,7 +91,7 @@ const MILESTONES: TimelineMilestone[] = [
   {
     dayNumber: 730,
     label: "Day 730 • Two Years of Us",
-    dateStr: "Nov 2, 2026",
+    dateStr: "Nov 3, 2026",
     season: "Autumn 2026",
     monthKey: "2026-11",
     description: "730 days of shared laughter, growth, and the greatest love of our lives.",
@@ -609,11 +609,11 @@ export default function StoryVerticalTimeline({
             })}
           </div>
 
-          {/* Destination Milestone: Nov 2, 2026 */}
+          {/* Destination Milestone: Nov 3, 2026 */}
           <div className="relative flex items-center justify-start sm:justify-center mt-16 pl-1.5 sm:pl-0">
             <div className="z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-sky-600 via-blue-700 to-indigo-800 text-white text-xs font-sans tracking-widest uppercase shadow-lg">
               <Heart className="w-3.5 h-3.5 fill-white animate-pulse" />
-              <span>Nov 2, 2026 • Two Years Complete</span>
+              <span>Nov 3, 2026 • Two Years Complete</span>
             </div>
           </div>
         </div>
