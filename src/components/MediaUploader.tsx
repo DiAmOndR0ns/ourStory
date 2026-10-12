@@ -39,6 +39,7 @@ export default function MediaUploader({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isCloudSaved, setIsCloudSaved] = useState<boolean>(false);
 
   // Staged / Preview State
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export default function MediaUploader({
 
         if (error) {
           console.warn("Supabase Storage upload warning:", error);
+          setIsCloudSaved(false);
           setErrorMsg(
             error.message.includes("Bucket not found")
               ? "Storage bucket 'memories' not found in Supabase. Run the SQL script in Admin to create it!"
@@ -124,18 +126,22 @@ export default function MediaUploader({
           .getPublicUrl(data.path);
 
         const finalUrl = urlData.publicUrl || localBlobUrl;
+        setIsCloudSaved(true);
+        setErrorMsg(null);
         setPreviewUrl(finalUrl);
         setUploading(false);
         setProgress(100);
         notifyParent(finalUrl, detectedType, file.name, file.size);
       } catch (err: any) {
         console.warn("Supabase upload exception:", err);
+        setIsCloudSaved(false);
         setUploading(false);
         setProgress(100);
         notifyParent(localBlobUrl, detectedType, file.name, file.size);
       }
     } else {
       // Supabase credentials not set yet, use local preview and notify
+      setIsCloudSaved(false);
       setProgress(100);
       setUploading(false);
       notifyParent(localBlobUrl, detectedType, file.name, file.size);
@@ -323,7 +329,7 @@ export default function MediaUploader({
                   <div className="flex items-center justify-between text-xs text-stone-600">
                     <span className="flex items-center gap-1.5 font-medium">
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
-                      Uploading to Supabase Storage...
+                      Uploading to Supabase Storage bucket...
                     </span>
                     <span className="font-mono text-[11px]">{progress}%</span>
                   </div>
@@ -335,10 +341,21 @@ export default function MediaUploader({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between text-xs text-stone-600 pt-1">
-                  <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Ready ({fileName} • {fileSizeStr})</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-stone-600 pt-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>{fileName} ({fileSizeStr})</span>
+                    </div>
+                    {isCloudSaved ? (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-medium">
+                        Stored in Supabase bucket
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-mono font-medium">
+                        Local preview
+                      </span>
+                    )}
                   </div>
                   <button
                     type="button"

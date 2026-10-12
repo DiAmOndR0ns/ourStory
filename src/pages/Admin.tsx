@@ -258,12 +258,12 @@ export default function Admin() {
         created_at: new Date().toISOString()
       };
       setMediaList(prev => [localRecord, ...prev]);
-      setSaveStatus("Successfully saved memory & media to story!");
+      setSaveStatus("Saved to Supabase database & timeline!");
       setMemoryTitle("");
       setStagedMedia(null);
-    } catch (err) {
-      console.warn("Error saving memory:", err);
-      setSaveStatus("Saved locally in browser session.");
+    } catch (err: any) {
+      console.warn("Remote save warning:", err);
+      setSaveStatus(`Saved locally in browser (Database note: ${err?.message || "Check connection"}).`);
       setMemoryTitle("");
       setStagedMedia(null);
     } finally {

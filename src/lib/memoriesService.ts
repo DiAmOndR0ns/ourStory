@@ -364,11 +364,15 @@ export async function saveNewMemory(
   if (isSupabaseConfigured()) {
     try {
       // Ensure chapter exists in DB
-      await supabase.from("chapters").upsert({
+      const { error: chError } = await supabase.from("chapters").upsert({
         id: memoryToSave.chapter_id,
         title: `Chapter ${memoryToSave.chapter_id}`,
         order: 1
       }, { onConflict: "id" });
+
+      if (chError) {
+        console.error("Supabase chapter upsert error:", chError);
+      }
 
       const { error } = await supabase.from("memories").upsert({
         id: memoryToSave.id,
@@ -382,13 +386,14 @@ export async function saveNewMemory(
       }, { onConflict: "id" });
 
       if (error) {
-        console.warn("Supabase memory upsert error:", error);
+        console.error("Supabase memory upsert error:", error);
+        throw error;
       }
 
       // Also record media items in the dedicated media table if present
       if (memoryToSave.media && memoryToSave.media.length > 0) {
         for (const item of memoryToSave.media) {
-          await supabase.from("media").upsert({
+          const { error: medError } = await supabase.from("media").upsert({
             id: item.id || `media-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             memory_id: memoryToSave.id,
             type: item.type,
@@ -397,10 +402,16 @@ export async function saveNewMemory(
             order: item.order || 1,
             film_type: item.film_type || "Polaroid"
           }, { onConflict: "id" });
+
+          if (medError) {
+            console.error("Supabase media table upsert error:", medError);
+          }
         }
       }
     } catch (err) {
-      console.warn("Remote Supabase write skipped or failed (local cache preserved):", err);
+      console.error("Remote Supabase write failed:", err);
+      // Let caller handle or display status
+      throw err;
     }
   }
 

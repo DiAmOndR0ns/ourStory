@@ -27,26 +27,46 @@ export const saveSupabaseConfig = (url: string, anonKey: string) => {
   }
 };
 
-const initialConfig = getSupabaseConfig();
-
-const fallbackUrl = 'https://ezbomqqxcfnfyynmnnll.supabase.co';
-const fallbackKey = 'sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V';
+export const fallbackUrl = 'https://ezbomqqxcfnfyynmnnll.supabase.co';
+export const fallbackKey = 'sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V';
 
 export const isSupabaseConfigured = (): boolean => {
   const { url, anonKey } = getSupabaseConfig();
-  return Boolean(url && anonKey && url.includes('supabase.co') && !url.includes('placeholder-project'));
+  const effectiveUrl = url || fallbackUrl;
+  const effectiveKey = anonKey || fallbackKey;
+  return Boolean(effectiveUrl && effectiveKey && effectiveUrl.includes('supabase.co') && !effectiveUrl.includes('placeholder-project'));
 };
 
-export const supabase: SupabaseClient = createClient(
-  initialConfig.url || fallbackUrl,
-  initialConfig.anonKey || fallbackKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    }
+let activeClient: SupabaseClient | null = null;
+let lastUsedUrl = '';
+let lastUsedKey = '';
+
+export const getSupabaseClient = (): SupabaseClient => {
+  const config = getSupabaseConfig();
+  const url = config.url || fallbackUrl;
+  const key = config.anonKey || fallbackKey;
+
+  if (!activeClient || lastUsedUrl !== url || lastUsedKey !== key) {
+    lastUsedUrl = url;
+    lastUsedKey = key;
+    activeClient = createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
   }
-);
+  return activeClient;
+};
+
+// Export Proxy so any code importing `supabase` directly always delegates to current activeClient
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
+});
 
 /**
  * SQL Setup script that user can run in Supabase SQL Editor with 1-click
