@@ -3,13 +3,13 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Safe access to Vite environment variables
 const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
 
-// Allow setting Supabase credentials via environment variables OR saved in localStorage
+// Allow setting Supabase credentials via environment variables (with or without VITE_ prefix) OR saved in localStorage
 export const getSupabaseConfig = () => {
   const localUrl = typeof window !== 'undefined' ? localStorage.getItem('supabase_custom_url') : null;
   const localKey = typeof window !== 'undefined' ? localStorage.getItem('supabase_custom_key') : null;
 
-  const url = env.VITE_SUPABASE_URL || localUrl || '';
-  const anonKey = env.VITE_SUPABASE_ANON_KEY || localKey || '';
+  const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL || localUrl || '';
+  const anonKey = env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY || localKey || '';
 
   return { url: url.trim(), anonKey: anonKey.trim() };
 };
@@ -29,9 +29,8 @@ export const saveSupabaseConfig = (url: string, anonKey: string) => {
 
 const initialConfig = getSupabaseConfig();
 
-// Fallback dummy values if not yet configured, to avoid crash on createClient
-const fallbackUrl = 'https://placeholder-project.supabase.co';
-const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder';
+const fallbackUrl = 'https://ezbomqqxcfnfyynmnnll.supabase.co';
+const fallbackKey = 'sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V';
 
 export const isSupabaseConfigured = (): boolean => {
   const { url, anonKey } = getSupabaseConfig();

@@ -1018,11 +1018,11 @@ export default function Admin() {
               <div className="mt-4 pt-4 border-t border-stone-100">
                 <h4 className="text-xs font-semibold text-stone-700 mb-1">For your Vercel Deployment:</h4>
                 <p className="text-xs text-stone-500 leading-relaxed">
-                  You can also add these in your <strong>Vercel Project &gt; Settings &gt; Environment Variables</strong>:
+                  You can add these in your <strong>Vercel Project &gt; Settings &gt; Environment Variables</strong>:
                 </p>
                 <div className="mt-2 p-3 bg-stone-50 rounded-xl font-mono text-[11px] text-stone-700 space-y-1">
-                  <div>VITE_SUPABASE_URL = {supabaseUrlInput || "https://your-project.supabase.co"}</div>
-                  <div>VITE_SUPABASE_ANON_KEY = {supabaseKeyInput ? (supabaseKeyInput.substring(0, 25) + "...") : "eyJhbGciOi..."}</div>
+                  <div>SUPABASE_URL = {supabaseUrlInput || "https://your-project.supabase.co"}</div>
+                  <div>SUPABASE_PUBLISHABLE_KEY = {supabaseKeyInput ? (supabaseKeyInput.substring(0, 25) + "...") : "sb_publishable_..."}</div>
                 </div>
               </div>
             </div>
