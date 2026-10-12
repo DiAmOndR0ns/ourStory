@@ -14,7 +14,7 @@ import { DEFAULT_CHAPTERS } from "../data/defaultStoryData";
 import { ChapterItem, MemoryItem } from "../types";
 import StoryVerticalTimeline from "../components/StoryVerticalTimeline";
 import AddMemoryModal from "../components/AddMemoryModal";
-import { getAllMemories } from "../lib/memoriesService";
+import { getAllMemories, isPlaceholderMediaUrl } from "../lib/memoriesService";
 
 export default function Story() {
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
@@ -30,7 +30,11 @@ export default function Story() {
   const loadData = useCallback(async () => {
     try {
       // 1. Fetch chapters
-      let chapterList = DEFAULT_CHAPTERS;
+      let chapterList = DEFAULT_CHAPTERS.map(ch => ({
+        ...ch,
+        cover_image: isPlaceholderMediaUrl(ch.cover_image) ? undefined : ch.cover_image
+      }));
+
       if (isSupabaseConfigured()) {
         try {
           const { data, error } = await supabase
@@ -38,10 +42,15 @@ export default function Story() {
             .select("*")
             .order("order", { ascending: true });
           if (!error && data && data.length > 0) {
-            chapterList = data.map((d, i) => ({
-              ...DEFAULT_CHAPTERS[i],
-              ...d
-            }));
+            chapterList = data.map((d, i) => {
+              const fallback: Partial<ChapterItem> = DEFAULT_CHAPTERS[i] || {};
+              const rawCover = d.cover_image || fallback.cover_image;
+              return {
+                ...fallback,
+                ...d,
+                cover_image: isPlaceholderMediaUrl(rawCover) ? undefined : rawCover
+              };
+            });
           }
         } catch (err) {
           console.warn("Using default chapters:", err);

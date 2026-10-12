@@ -114,6 +114,7 @@ export default function Admin() {
       loadMediaRecords();
     };
     window.addEventListener("love_story_memories_updated", handleUpdate);
+    window.addEventListener("supabase_media_uploaded", loadMediaRecords);
     window.addEventListener("supabase_config_updated", () => {
       setIsConnected(isSupabaseConfigured());
       loadMediaRecords();
@@ -122,6 +123,7 @@ export default function Admin() {
 
     return () => {
       window.removeEventListener("love_story_memories_updated", handleUpdate);
+      window.removeEventListener("supabase_media_uploaded", loadMediaRecords);
     };
   }, []);
 
@@ -261,6 +263,8 @@ export default function Admin() {
       setSaveStatus("Saved to Supabase database & timeline!");
       setMemoryTitle("");
       setStagedMedia(null);
+      await loadMediaRecords();
+      await loadAllMemoriesList();
     } catch (err: any) {
       console.warn("Remote save warning:", err);
       setSaveStatus(`Saved locally in browser (Database note: ${err?.message || "Check connection"}).`);
@@ -964,7 +968,7 @@ export default function Admin() {
                     type="text"
                     value={supabaseUrlInput}
                     onChange={(e) => setSupabaseUrlInput(e.target.value)}
-                    placeholder="https://xyzabcdefg.supabase.co"
+                    placeholder="https://ezbomqqxcfnfyynmnnll.supabase.co"
                     className="w-full px-4 py-2.5 text-xs rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono bg-stone-50/50"
                   />
                 </div>
@@ -977,7 +981,7 @@ export default function Admin() {
                     rows={2}
                     value={supabaseKeyInput}
                     onChange={(e) => setSupabaseKeyInput(e.target.value)}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    placeholder="sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V"
                     className="w-full px-4 py-2 text-xs rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono bg-stone-50/50 resize-none"
                   />
                 </div>

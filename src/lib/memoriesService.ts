@@ -150,6 +150,31 @@ export function inferChapterIdFromDate(dateStr: string): { chapterId: string; ch
 }
 
 /**
+ * Checks if a media item points to a dummy or placeholder external image/video
+ */
+export function isPlaceholderMediaUrl(url?: string | null): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("unsplash.com") ||
+    lower.includes("via.placeholder") ||
+    lower.includes("picsum.photos") ||
+    lower.includes("placehold.co") ||
+    lower.includes("placeholder-project") ||
+    lower.includes("example.com") ||
+    lower.includes("gtv-videos-bucket/sample")
+  );
+}
+
+/**
+ * Strips out any placeholder images/videos, preserving only user-uploaded real media
+ */
+export function sanitizeMediaList(media?: MediaItem[]): MediaItem[] {
+  if (!Array.isArray(media)) return [];
+  return media.filter(item => Boolean(item && item.storage_path && !isPlaceholderMediaUrl(item.storage_path)));
+}
+
+/**
  * Gets memories cached in local storage
  */
 export function getLocalUserMemories(): MemoryItem[] {
@@ -157,7 +182,22 @@ export function getLocalUserMemories(): MemoryItem[] {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    
+    // Automatically sanitize and purge any placeholder images stored in localStorage
+    let hadPlaceholders = false;
+    const sanitized = parsed.map((m: MemoryItem) => {
+      const cleanMedia = sanitizeMediaList(m.media);
+      if (cleanMedia.length !== (m.media?.length || 0)) {
+        hadPlaceholders = true;
+      }
+      return { ...m, media: cleanMedia };
+    });
+
+    if (hadPlaceholders) {
+      saveLocalUserMemories(sanitized);
+    }
+    return sanitized;
   } catch (e) {
     console.warn("Could not read local user memories:", e);
     return [];
@@ -227,7 +267,8 @@ export async function getAllMemories(): Promise<MemoryItem[]> {
 
       if (!error && data && data.length > 0) {
         for (const row of data) {
-          const mediaItems: MediaItem[] = Array.isArray(row.media) ? row.media : [];
+          const rawMedia: MediaItem[] = Array.isArray(row.media) ? row.media : [];
+          const mediaItems = sanitizeMediaList(rawMedia);
           remoteMemories.push({
             id: row.id,
             chapter_id: row.chapter_id || "chapter-1",
@@ -319,7 +360,7 @@ export async function getMemoryById(id: string): Promise<MemoryItem | null> {
           date: data.date || "",
           location: data.location || "",
           song: data.song || undefined,
-          media: Array.isArray(data.media) ? data.media : []
+          media: sanitizeMediaList(Array.isArray(data.media) ? data.media : [])
         };
       }
     } catch {
@@ -363,11 +404,16 @@ export async function saveNewMemory(
   // 2. Write to Supabase if configured
   if (isSupabaseConfigured()) {
     try {
-      // Ensure chapter exists in DB
+      // Ensure chapter exists in DB with full title and metadata
+      const chInfo = DEFAULT_CHAPTERS.find(c => c.id === memoryToSave.chapter_id);
       const { error: chError } = await supabase.from("chapters").upsert({
         id: memoryToSave.chapter_id,
-        title: `Chapter ${memoryToSave.chapter_id}`,
-        order: 1
+        title: chInfo?.title || `Chapter ${memoryToSave.chapter_id}`,
+        description: chInfo?.description || "",
+        date: chInfo?.date || "",
+        order: chInfo?.order || 1,
+        cover_image: chInfo?.cover_image || null,
+        highlight_count: chInfo?.highlight_count || 0
       }, { onConflict: "id" });
 
       if (chError) {
@@ -495,7 +541,8 @@ export function buildMonthlyJourney(
 
   for (let year = startYear; year <= endYear; year++) {
     const maxMonth = year === 2026 ? 11 : 12;
-    const minMonth = 1;
+    // Keep only November 2024 onwards, not the entire 2024 year
+    const minMonth = year === 2024 ? 11 : 1;
 
     for (let month = minMonth; month <= maxMonth; month++) {
       const monthKey = `${year}-${String(month).padStart(2, "0")}`;

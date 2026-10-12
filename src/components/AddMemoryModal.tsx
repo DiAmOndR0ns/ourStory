@@ -85,9 +85,15 @@ export default function AddMemoryModal({
 
   // Sync date when Year and Month quick buttons are selected
   const handleYearMonthQuickSelect = (year: number, month: number) => {
+    let validMonth = month;
+    if (year === 2024 && month < 11) {
+      validMonth = 11;
+    } else if (year === 2026 && month > 11) {
+      validMonth = 11;
+    }
     setSelectedYear(year);
-    setSelectedMonth(month);
-    const formatted = `${MONTH_NAMES[month - 1]} 15, ${year}`;
+    setSelectedMonth(validMonth);
+    const formatted = `${MONTH_NAMES[validMonth - 1]} 15, ${year}`;
     setDate(formatted);
     const { chapterId: inferred } = inferChapterIdFromDate(formatted);
     setChapterId(inferred);
@@ -191,7 +197,7 @@ export default function AddMemoryModal({
                   Add a Memory with Her
                 </h2>
                 <p className="text-sky-800/70 text-xs">
-                  Chronicle every month since 2024 into your two-year story timeline.
+                  Chronicle every month since November 2024 into your two-year story timeline.
                 </p>
               </div>
             </div>
@@ -236,7 +242,7 @@ export default function AddMemoryModal({
                         : "bg-white text-sky-800 border border-sky-200 hover:bg-sky-100"
                     }`}
                   >
-                    {y}
+                    {y === 2024 ? "2024 (Nov-Dec)" : y}
                   </button>
                 ))}
               </div>
@@ -245,6 +251,8 @@ export default function AddMemoryModal({
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                 {MONTH_NAMES.map((name, idx) => {
                   const mNum = idx + 1;
+                  // For 2024, keep only November 2024 onwards
+                  if (selectedYear === 2024 && mNum < 11) return null;
                   // Don't show Dec 2026 since anniversary is Nov 2026
                   if (selectedYear === 2026 && mNum > 11) return null;
 

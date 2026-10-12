@@ -3,38 +3,131 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Safe access to Vite environment variables
 const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
 
-// Allow setting Supabase credentials via environment variables (with or without VITE_ prefix) OR saved in localStorage
+export const fallbackUrl = 'https://ezbomqqxcfnfyynmnnll.supabase.co';
+export const fallbackKey = 'sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V';
+
+/**
+ * Validates and sanitizes a Supabase project URL.
+ * Rejects any placeholder or dummy domain URLs so queries never fail with ERR_NAME_NOT_RESOLVED.
+ */
+export const sanitizeSupabaseUrl = (val?: string | null): string => {
+  if (!val) return '';
+  const trimmed = val.trim();
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('placeholder') ||
+    lower.includes('your-project') ||
+    lower.includes('xyzabcdefg') ||
+    lower.includes('example.com') ||
+    !lower.startsWith('http') ||
+    !lower.includes('supabase.co')
+  ) {
+    return '';
+  }
+  return trimmed;
+};
+
+/**
+ * Validates and sanitizes a Supabase publishable or anon key.
+ */
+export const sanitizeSupabaseKey = (val?: string | null): string => {
+  if (!val) return '';
+  const trimmed = val.trim();
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes('placeholder') ||
+    lower.includes('your-') ||
+    lower.includes('...') ||
+    lower.includes('example') ||
+    trimmed.length < 20
+  ) {
+    return '';
+  }
+  return trimmed;
+};
+
+// Immediately clean up any stale or placeholder URLs stored in browser localStorage
+if (typeof window !== 'undefined') {
+  try {
+    const rawUrl = localStorage.getItem('supabase_custom_url');
+    if (rawUrl && !sanitizeSupabaseUrl(rawUrl)) {
+      localStorage.removeItem('supabase_custom_url');
+    }
+    const rawKey = localStorage.getItem('supabase_custom_key');
+    if (rawKey && !sanitizeSupabaseKey(rawKey)) {
+      localStorage.removeItem('supabase_custom_key');
+    }
+    // Sweep all localStorage keys and remove any items containing placeholder domains
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key) {
+        const itemVal = localStorage.getItem(key);
+        if (typeof itemVal === 'string' && (
+          itemVal.includes('placeholder') ||
+          itemVal.includes('your-project') ||
+          itemVal.includes('xyzabcdefg')
+        )) {
+          // If it was custom URL or key with placeholder, wipe it out
+          if (key.includes('supabase_custom')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('LocalStorage cleanup warning:', e);
+  }
+}
+
+// Allow setting Supabase credentials via environment variables OR saved in localStorage OR verified project fallback
 export const getSupabaseConfig = () => {
   const localUrl = typeof window !== 'undefined' ? localStorage.getItem('supabase_custom_url') : null;
   const localKey = typeof window !== 'undefined' ? localStorage.getItem('supabase_custom_key') : null;
 
-  const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL || localUrl || '';
-  const anonKey = env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY || localKey || '';
+  const validLocalUrl = sanitizeSupabaseUrl(localUrl);
+  const validLocalKey = sanitizeSupabaseKey(localKey);
 
-  return { url: url.trim(), anonKey: anonKey.trim() };
+  const envUrl = sanitizeSupabaseUrl(env.VITE_SUPABASE_URL || env.SUPABASE_URL);
+  const envKey = sanitizeSupabaseKey(env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY);
+
+  const url = validLocalUrl || envUrl || fallbackUrl;
+  const anonKey = validLocalKey || envKey || fallbackKey;
+
+  return { url, anonKey };
 };
 
 export const saveSupabaseConfig = (url: string, anonKey: string) => {
   if (typeof window !== 'undefined') {
-    if (url.trim()) localStorage.setItem('supabase_custom_url', url.trim());
+    const cleanUrl = sanitizeSupabaseUrl(url);
+    const cleanKey = sanitizeSupabaseKey(anonKey);
+
+    if (cleanUrl) localStorage.setItem('supabase_custom_url', cleanUrl);
     else localStorage.removeItem('supabase_custom_url');
 
-    if (anonKey.trim()) localStorage.setItem('supabase_custom_key', anonKey.trim());
+    if (cleanKey) localStorage.setItem('supabase_custom_key', cleanKey);
     else localStorage.removeItem('supabase_custom_key');
     
+    // Invalidate client so next call creates a fresh client
+    activeClient = null;
+    lastUsedUrl = '';
+    lastUsedKey = '';
+
     // Dispatch event so UI updates immediately
     window.dispatchEvent(new Event('supabase_config_updated'));
   }
 };
 
-export const fallbackUrl = 'https://ezbomqqxcfnfyynmnnll.supabase.co';
-export const fallbackKey = 'sb_publishable_Rk3rkxRyjAAfxZQryNUgyA_PhGdfi6V';
-
 export const isSupabaseConfigured = (): boolean => {
   const { url, anonKey } = getSupabaseConfig();
-  const effectiveUrl = url || fallbackUrl;
-  const effectiveKey = anonKey || fallbackKey;
-  return Boolean(effectiveUrl && effectiveKey && effectiveUrl.includes('supabase.co') && !effectiveUrl.includes('placeholder-project'));
+  const lowerUrl = (url || '').toLowerCase();
+  return Boolean(
+    url && 
+    anonKey && 
+    lowerUrl.includes('supabase.co') && 
+    !lowerUrl.includes('placeholder') &&
+    !lowerUrl.includes('your-project') &&
+    !lowerUrl.includes('xyzabcdefg')
+  );
 };
 
 let activeClient: SupabaseClient | null = null;
@@ -42,14 +135,12 @@ let lastUsedUrl = '';
 let lastUsedKey = '';
 
 export const getSupabaseClient = (): SupabaseClient => {
-  const config = getSupabaseConfig();
-  const url = config.url || fallbackUrl;
-  const key = config.anonKey || fallbackKey;
+  const { url, anonKey } = getSupabaseConfig();
 
-  if (!activeClient || lastUsedUrl !== url || lastUsedKey !== key) {
+  if (!activeClient || lastUsedUrl !== url || lastUsedKey !== anonKey) {
     lastUsedUrl = url;
-    lastUsedKey = key;
-    activeClient = createClient(url, key, {
+    lastUsedKey = anonKey;
+    activeClient = createClient(url, anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -167,4 +258,15 @@ WITH CHECK (bucket_id = 'memories');
 CREATE POLICY "Public delete access for memories bucket"
 ON storage.objects FOR DELETE
 USING (bucket_id = 'memories');
+
+-- 8. Seed Default Story Chapters
+INSERT INTO public.chapters (id, title, description, date, "order")
+VALUES 
+  ('chapter-1', 'Chapter 1: The Spark & The Start', 'Where two worlds collided into our Ohana adventure', 'Nov 2024', 1),
+  ('chapter-2', 'Chapter 2: Winter Warmth & New Habits', 'First holidays, cozy dinners, and becoming each other''s safe haven', 'Dec 2024 - Apr 2025', 2),
+  ('chapter-3', 'Chapter 3: Summer Escapes & Golden Hours', 'Sunny roadtrips, late night laughs, and unhurried days', 'May 2025 - Aug 2025', 3),
+  ('chapter-4', 'Chapter 4: Little Routines & Big Promises', 'The magic in grocery runs, cooked breakfasts, and quiet moments', 'Sep 2025 - Oct 2025', 4),
+  ('chapter-5', 'Chapter 5: Two Years Strong & Growing', 'Celebrating 730 days of unconditional love and our monthsary on Nov 3', 'Nov 2025 - Oct 2026', 5),
+  ('chapter-6', 'Chapter 6: Forever and Beyond', 'All the chapters yet to be written, with you always', 'Nov 2026 & Beyond', 6)
+ON CONFLICT (id) DO NOTHING;
 `;

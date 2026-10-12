@@ -22,7 +22,7 @@ import AddMemoryModal from "../components/AddMemoryModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { ChapterItem, MemoryItem } from "../types";
 import { DEFAULT_CHAPTERS } from "../data/defaultStoryData";
-import { getMemoriesForChapter, deleteMemory } from "../lib/memoriesService";
+import { getMemoriesForChapter, deleteMemory, isPlaceholderMediaUrl } from "../lib/memoriesService";
 
 export default function Chapter() {
   const { chapterId } = useParams<{ chapterId: string }>();
@@ -63,6 +63,13 @@ export default function Chapter() {
         chapterData = DEFAULT_CHAPTERS.find(
           (c) => c.id === chapterId || c.id === `chapter-${chapterId}` || String(c.order) === chapterId
         ) || DEFAULT_CHAPTERS[0];
+      }
+
+      if (chapterData && isPlaceholderMediaUrl(chapterData.cover_image)) {
+        chapterData = {
+          ...chapterData,
+          cover_image: undefined
+        };
       }
       setChapter(chapterData);
 
