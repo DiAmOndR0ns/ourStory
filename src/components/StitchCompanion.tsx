@@ -40,6 +40,11 @@ const STITCH_QUOTES = [
     quote: "Two years of building our very own universe together. You are my favorite human.",
     author: "Nov 3, 2024 → Forever",
     tag: "Anniversary Vow"
+  },
+  {
+    quote: "That October right swipe on your Facebook Dating profile was the single best tap of my whole life.",
+    author: "October 2024",
+    tag: "Where It All Began"
   }
 ];
 

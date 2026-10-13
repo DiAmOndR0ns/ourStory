@@ -59,8 +59,13 @@ export default function Landing() {
         <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl tracking-tight text-slate-900 mb-3">
           Our Story
         </h1>
-        <p className="text-xs sm:text-sm tracking-widest uppercase text-sky-900/60 mb-8 font-sans font-medium">
+        <p className="text-xs sm:text-sm tracking-widest uppercase text-sky-900/60 mb-2 font-sans font-medium">
           Under every shade of blue since November 3, 2024
+        </p>
+        <p className="text-[11px] text-sky-700/80 mb-8 font-sans flex items-center justify-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
+          <span>Swiped right on her Facebook Dating PFP in October 2024</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
         </p>
 
         {/* Ohana Quote Motto */}

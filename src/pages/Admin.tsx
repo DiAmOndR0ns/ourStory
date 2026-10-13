@@ -183,24 +183,38 @@ export default function Admin() {
           .order("created_at", { ascending: false })
           .limit(50);
         if (!error && data && data.length > 0) {
-          setMediaList(data as AdminMediaRecord[]);
+          const seen = new Set<string>();
+          const deduped: AdminMediaRecord[] = [];
+          for (const item of data as AdminMediaRecord[]) {
+            const key = item.storage_path?.trim() || item.id;
+            if (!seen.has(key)) {
+              seen.add(key);
+              deduped.push(item);
+            }
+          }
+          setMediaList(deduped);
           return;
         }
       }
-      // Fallback: extract media from all memories
+      // Fallback: extract media from all memories with deduplication
       const memories = await getAllMemories();
       const extracted: AdminMediaRecord[] = [];
+      const seen = new Set<string>();
       memories.forEach(m => {
         if (m.media) {
           m.media.forEach(med => {
-            extracted.push({
-              id: med.id,
-              type: med.type,
-              storage_path: med.storage_path,
-              caption: med.caption || m.title,
-              chapter_title: m.chapter_id,
-              memory_id: m.id
-            });
+            const key = med.storage_path?.trim() || med.id;
+            if (!seen.has(key)) {
+              seen.add(key);
+              extracted.push({
+                id: med.id,
+                type: med.type,
+                storage_path: med.storage_path,
+                caption: med.caption || m.title,
+                chapter_title: m.chapter_id,
+                memory_id: m.id
+              });
+            }
           });
         }
       });
@@ -252,15 +266,7 @@ export default function Admin() {
         media: [mediaItem]
       });
 
-      const localRecord: AdminMediaRecord = {
-        id: mediaItem.id,
-        type: stagedMedia.type,
-        storage_path: stagedMedia.url,
-        caption: stagedMedia.caption,
-        created_at: new Date().toISOString()
-      };
-      setMediaList(prev => [localRecord, ...prev]);
-      setSaveStatus("Saved to Supabase database & timeline!");
+      setSaveStatus("Saved to story chapter & timeline!");
       setMemoryTitle("");
       setStagedMedia(null);
       await loadMediaRecords();
@@ -270,6 +276,8 @@ export default function Admin() {
       setSaveStatus(`Saved locally in browser (Database note: ${err?.message || "Check connection"}).`);
       setMemoryTitle("");
       setStagedMedia(null);
+      await loadMediaRecords();
+      await loadAllMemoriesList();
     } finally {
       setSaving(false);
     }

@@ -5,9 +5,9 @@ export const DEFAULT_CHAPTERS: ChapterItem[] = [
     id: "chapter-1",
     order: 1,
     title: "The Beginning",
-    date: "November 3, 2024",
-    description: "The spark that started it all. Nervous first hellos, late-night coffees, and the moment we knew something special was happening.",
-    highlight_count: 3
+    date: "October - November 2024",
+    description: "From swiping right on her profile picture on Facebook Dating in October to our first hellos, late-night coffees, and the moment we knew something special was happening.",
+    highlight_count: 4
   },
   {
     id: "chapter-2",
@@ -53,6 +53,19 @@ export const DEFAULT_CHAPTERS: ChapterItem[] = [
 
 export const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
   "chapter-1": [
+    {
+      id: "mem-100",
+      chapter_id: "chapter-1",
+      title: "Swiping Right on Facebook Dating",
+      date: "October 2024",
+      location: "Facebook Dating",
+      description: "Seeing your profile picture on Facebook Dating and knowing in a split second I had to swipe right. The small digital spark that started our entire story.",
+      song: {
+        title: "Taylor Swift",
+        artist: "Invisible String"
+      },
+      media: []
+    },
     {
       id: "mem-101",
       chapter_id: "chapter-1",

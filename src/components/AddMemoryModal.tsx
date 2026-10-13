@@ -86,8 +86,8 @@ export default function AddMemoryModal({
   // Sync date when Year and Month quick buttons are selected
   const handleYearMonthQuickSelect = (year: number, month: number) => {
     let validMonth = month;
-    if (year === 2024 && month < 11) {
-      validMonth = 11;
+    if (year === 2024 && month < 10) {
+      validMonth = 10;
     } else if (year === 2026 && month > 11) {
       validMonth = 11;
     }
@@ -197,7 +197,7 @@ export default function AddMemoryModal({
                   Add a Memory with Her
                 </h2>
                 <p className="text-sky-800/70 text-xs">
-                  Chronicle every month since November 2024 into your two-year story timeline.
+                  Chronicle every month since October 2024 into your two-year story timeline.
                 </p>
               </div>
             </div>
@@ -242,7 +242,7 @@ export default function AddMemoryModal({
                         : "bg-white text-sky-800 border border-sky-200 hover:bg-sky-100"
                     }`}
                   >
-                    {y === 2024 ? "2024 (Nov-Dec)" : y}
+                    {y === 2024 ? "2024 (Oct-Dec)" : y}
                   </button>
                 ))}
               </div>
@@ -251,8 +251,8 @@ export default function AddMemoryModal({
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                 {MONTH_NAMES.map((name, idx) => {
                   const mNum = idx + 1;
-                  // For 2024, keep only November 2024 onwards
-                  if (selectedYear === 2024 && mNum < 11) return null;
+                  // For 2024, keep October 2024 onwards (Facebook Dating meet)
+                  if (selectedYear === 2024 && mNum < 10) return null;
                   // Don't show Dec 2026 since anniversary is Nov 2026
                   if (selectedYear === 2026 && mNum > 11) return null;
 
@@ -305,7 +305,7 @@ export default function AddMemoryModal({
                       const { chapterId: inferred } = inferChapterIdFromDate(e.target.value);
                       setChapterId(inferred);
                     }}
-                    placeholder="e.g. November 14, 2024"
+                    placeholder="e.g. October 2024 or November 3, 2024"
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-sky-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
                   />
                 </div>

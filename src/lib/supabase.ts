@@ -262,7 +262,7 @@ USING (bucket_id = 'memories');
 -- 8. Seed Default Story Chapters
 INSERT INTO public.chapters (id, title, description, date, "order")
 VALUES 
-  ('chapter-1', 'Chapter 1: The Spark & The Start', 'Where two worlds collided into our Ohana adventure', 'Nov 2024', 1),
+  ('chapter-1', 'Chapter 1: The Spark & The Start', 'Where two worlds collided into our Ohana adventure — swiping right on Facebook Dating in October through our first coffees', 'Oct - Nov 2024', 1),
   ('chapter-2', 'Chapter 2: Winter Warmth & New Habits', 'First holidays, cozy dinners, and becoming each other''s safe haven', 'Dec 2024 - Apr 2025', 2),
   ('chapter-3', 'Chapter 3: Summer Escapes & Golden Hours', 'Sunny roadtrips, late night laughs, and unhurried days', 'May 2025 - Aug 2025', 3),
   ('chapter-4', 'Chapter 4: Little Routines & Big Promises', 'The magic in grocery runs, cooked breakfasts, and quiet moments', 'Sep 2025 - Oct 2025', 4),

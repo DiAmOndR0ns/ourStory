@@ -127,27 +127,6 @@ export default function MediaUploader({
 
         const finalUrl = urlData.publicUrl || localBlobUrl;
 
-        // Immediately persist to Supabase `media` table so it is saved to database
-        try {
-          const directMediaId = `media-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-          await supabase.from("media").upsert({
-            id: directMediaId,
-            type: detectedType,
-            storage_path: finalUrl,
-            caption: caption || file.name,
-            film_type: filmType,
-            order: 1
-          });
-          // Dispatch custom event so Media Library tab in Admin refreshes immediately
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("supabase_media_uploaded", {
-              detail: { id: directMediaId, url: finalUrl, type: detectedType }
-            }));
-          }
-        } catch (dbErr) {
-          console.warn("Supabase media table insert notice:", dbErr);
-        }
-
         setIsCloudSaved(true);
         setErrorMsg(null);
         setPreviewUrl(finalUrl);

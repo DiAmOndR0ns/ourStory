@@ -20,6 +20,8 @@ const DEFAULT_LETTERS: Letter[] = [
     theme_tag: "Shades of Blue",
     content: `My dearest,
 
+It all quietly started when I came across your profile picture on Facebook Dating that October and swiped right without hesitation. 
+
 Before I met you, blue was just a color on a palette. Now, it's the shade of the sky on that crisp November afternoon when we first talked for four straight hours. It's the color of the oversized sweater you burrow into on lazy Sundays. It's the reflection of the Pacific waves on our drives down the coastline.
 
 You brought an entire ocean of warmth, laughter, and calm into my life. Every shade of blue—from the quiet indigo of midnight conversations to the bright cerulean of your smile—reminds me of why I fell in love with you.

@@ -43,12 +43,21 @@ interface TimelineMilestone {
 
 const MILESTONES: TimelineMilestone[] = [
   {
+    dayNumber: 0,
+    label: "The Right Swipe • Facebook Dating",
+    dateStr: "Oct 2024",
+    season: "Autumn 2024",
+    monthKey: "2024-10",
+    description: "Swiping right on her profile picture on Facebook Dating. A single tap that quietly set our whole future into motion.",
+    positionChapterOrder: 1
+  },
+  {
     dayNumber: 1,
-    label: "Day 1 • The First Spark",
+    label: "Day 1 • The First In-Person Spark",
     dateStr: "Nov 3, 2024",
     season: "Autumn 2024",
     monthKey: "2024-11",
-    description: "The coffee that turned into hours of endless talking. Under a crisp autumn blue sky, where our universe began.",
+    description: "The coffee that turned into hours of endless talking. Under a crisp autumn blue sky, where our universe began in person.",
     positionChapterOrder: 1
   },
   {
@@ -202,13 +211,13 @@ export default function StoryVerticalTimeline({
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 border border-sky-100 text-sky-700 text-[11px] font-semibold tracking-widest uppercase mb-3">
               <Clock className="w-3.5 h-3.5 text-sky-500" />
-              Monthly Chronicle • Nov 2024 to Nov 2026
+              Monthly Chronicle • Oct 2024 to Nov 2026
             </div>
             <h2 className="font-serif text-2xl sm:text-3xl text-slate-900 mb-1.5 font-medium">
               Every Month Along Our Journey
             </h2>
             <p className="text-sky-800/70 text-sm font-sans max-w-xl">
-              Chronicling at least one memory per month with her since November 2024. Every upload immediately marks the month complete and weaves into this live vertical timeline.
+              Chronicling every month along our journey starting with swiping right on Facebook Dating in October 2024. Every upload immediately marks the month complete and weaves into this live vertical timeline.
             </p>
           </div>
 
@@ -244,7 +253,7 @@ export default function StoryVerticalTimeline({
               {monthlyStats.monthsWithMemories} of {monthlyStats.totalMonths} months chronicled
             </span>
             <span className="font-semibold text-blue-700 font-mono">
-              {monthlyStats.percentage}% of all months since November 2024
+              {monthlyStats.percentage}% of all months since October 2024
             </span>
           </div>
           <div className="w-full h-2.5 rounded-full bg-sky-100 overflow-hidden relative">
@@ -393,7 +402,7 @@ export default function StoryVerticalTimeline({
                   : "bg-white text-sky-800 border border-sky-150 hover:bg-sky-50"
               }`}
             >
-              {y === "all" ? "All (Nov 2024 - 2026)" : y === "2024" ? "2024 (Nov-Dec)" : y}
+              {y === "all" ? "All (Oct 2024 - 2026)" : y === "2024" ? "2024 (Oct-Dec)" : y}
             </button>
           ))}
         </div>
@@ -401,7 +410,7 @@ export default function StoryVerticalTimeline({
 
       {/* 4. MAIN TIMELINE CONTENT RENDERING */}
 
-      {/* MODE A: MONTHLY STREAM (Default - Directly reflects memories for every month since Nov 2024) */}
+      {/* MODE A: MONTHLY STREAM (Default - Directly reflects memories for every month since Oct 2024) */}
       {timelineMode === "monthly" && (
         <div className="relative before:absolute before:inset-0 before:left-6 sm:before:left-1/2 before:-translate-x-1/2 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-sky-300 before:via-blue-400 before:to-indigo-600">
           
@@ -409,7 +418,7 @@ export default function StoryVerticalTimeline({
           <div className="relative flex items-center justify-start sm:justify-center mb-12 pl-1.5 sm:pl-0">
             <div className="z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-white text-[11px] font-sans tracking-widest uppercase shadow-md">
               <Sparkles className="w-3 h-3 text-sky-300" />
-              <span>November 2024 • Beginning of Our Time</span>
+              <span>October 2024 • The Spark on Facebook Dating</span>
             </div>
           </div>
 

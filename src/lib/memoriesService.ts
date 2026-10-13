@@ -111,14 +111,14 @@ export function parseMemoryDate(dateStr: string): {
     };
   }
 
-  // Default fallback to Nov 2024
+  // Default fallback to Oct 2024 (where our story began on Facebook Dating)
   return {
     year: 2024,
-    month: 11,
-    monthKey: "2024-11",
-    monthName: "November",
-    label: "November 2024",
-    timestamp: new Date(2024, 10, 2).getTime()
+    month: 10,
+    monthKey: "2024-10",
+    monthName: "October",
+    label: "October 2024",
+    timestamp: new Date(2024, 9, 15).getTime()
   };
 }
 
@@ -378,10 +378,19 @@ export async function saveNewMemory(
   newMemoryData: Omit<MemoryItem, "id"> & { id?: string }
 ): Promise<MemoryItem> {
   const generatedId = newMemoryData.id || `user-mem-${Date.now()}`;
+  // Deduplicate media items by storage_path so duplicate uploads are never pushed
+  const seenMediaPaths = new Set<string>();
+  const dedupedMedia = (newMemoryData.media || []).filter(item => {
+    if (!item.storage_path) return false;
+    if (seenMediaPaths.has(item.storage_path)) return false;
+    seenMediaPaths.add(item.storage_path);
+    return true;
+  });
+
   const memoryToSave: MemoryItem = {
     ...newMemoryData,
     id: generatedId,
-    media: newMemoryData.media || []
+    media: dedupedMedia
   };
 
   // Un-delete if this ID was previously marked deleted
@@ -541,8 +550,8 @@ export function buildMonthlyJourney(
 
   for (let year = startYear; year <= endYear; year++) {
     const maxMonth = year === 2026 ? 11 : 12;
-    // Keep only November 2024 onwards, not the entire 2024 year
-    const minMonth = year === 2024 ? 11 : 1;
+    // Keep October 2024 onwards (when they met / swiped right on Facebook Dating)
+    const minMonth = year === 2024 ? 10 : 1;
 
     for (let month = minMonth; month <= maxMonth; month++) {
       const monthKey = `${year}-${String(month).padStart(2, "0")}`;
@@ -561,7 +570,10 @@ export function buildMonthlyJourney(
       let isSpecialMilestone = false;
       let milestoneTitle: string | undefined;
 
-      if (year === 2024 && month === 11) {
+      if (year === 2024 && month === 10) {
+        isSpecialMilestone = true;
+        milestoneTitle = "The Right Swipe • Facebook Dating Meet";
+      } else if (year === 2024 && month === 11) {
         isSpecialMilestone = true;
         milestoneTitle = "Day 1 • Our First Conversation & Beginning";
       } else if (year === 2025 && month === 11) {
