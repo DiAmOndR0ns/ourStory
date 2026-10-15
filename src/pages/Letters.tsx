@@ -1,89 +1,103 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { motion } from "motion/react";
-import { Lock, MailOpen, ArrowLeft, Sparkles, Heart } from "lucide-react";
-
-interface Letter {
-  id: string;
-  title: string;
-  content: string;
-  unlock_date: string;
-  theme_tag?: string;
-}
-
-const DEFAULT_LETTERS: Letter[] = [
-  {
-    id: "let-1",
-    title: "To The Girl Who Painted My World in Every Shade of Blue",
-    unlock_date: "November 3, 2024",
-    theme_tag: "Shades of Blue",
-    content: `My dearest,
-
-It all quietly started when I came across your profile picture on Facebook Dating that October and swiped right without hesitation. 
-
-Before I met you, blue was just a color on a palette. Now, it's the shade of the sky on that crisp November afternoon when we first talked for four straight hours. It's the color of the oversized sweater you burrow into on lazy Sundays. It's the reflection of the Pacific waves on our drives down the coastline.
-
-You brought an entire ocean of warmth, laughter, and calm into my life. Every shade of blue—from the quiet indigo of midnight conversations to the bright cerulean of your smile—reminds me of why I fell in love with you.
-
-Thank you for making our little corner of the world so deeply beautiful.`
-  },
-  {
-    id: "let-2",
-    title: "Our Ohana Promise • Experiment 626",
-    unlock_date: "November 3, 2025",
-    theme_tag: "Stitch & Ohana",
-    content: `My favorite human,
-
-You taught me the truest meaning of Stitch's words: "Ohana means family. Family means nobody gets left behind or forgotten."
-
-Whenever things get loud, or life gets overwhelming, looking at you feels like coming home. You have that same fierce, loyal, unconditional heart that Stitch searched the whole galaxy for. We are our own little team, our own cozy safe haven. 
-
-Through every high and every quiet low, I promise to always stand by your side. Nobody gets left behind. Not now, not in two years, not ever.`
-  },
-  {
-    id: "let-3",
-    title: "The Two-Year Anniversary Letter",
-    unlock_date: "November 3, 2026",
-    theme_tag: "Anniversary Time Capsule",
-    content: `Happy Two Years, my love.
-
-730 days of holding your hand. 730 days of waking up knowing that out of eight billion people on this planet, I get to love you. 
-
-Look back at all the chapters we've written together—the first coffee, the road trips, the inside jokes, the Stitch plushies on our bed, the late-night talks under starry skies. 
-
-This is only the prologue. Here is to a lifetime of adventures, and loving you in every shade of blue.`
-  }
-];
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  Lock, 
+  MailOpen, 
+  ArrowLeft, 
+  Sparkles, 
+  Heart, 
+  Plus, 
+  Edit3, 
+  RotateCcw, 
+  Feather,
+  CheckCircle,
+  Eye,
+  KeyRound
+} from "lucide-react";
+import { LetterItem } from "../types";
+import { 
+  getAllLetters, 
+  getLettersSync, 
+  resetLettersToDefault, 
+  LETTERS_UPDATED_EVENT 
+} from "../lib/lettersService";
+import WriteLetterModal from "../components/WriteLetterModal";
 
 export default function Letters() {
-  const [letters, setLetters] = useState<Letter[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedLetter, setSelectedLetter] = useState<Letter | null>(null);
+  const [letters, setLetters] = useState<LetterItem[]>(getLettersSync());
+  const [loading, setLoading] = useState(false);
+  const [selectedLetter, setSelectedLetter] = useState<LetterItem | null>(null);
+
+  // Modal State
+  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+  const [letterBeingEdited, setLetterBeingEdited] = useState<LetterItem | null>(null);
+
+  // Notification Banner
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchLetters() {
+    async function load() {
       try {
-        if (isSupabaseConfigured()) {
-          const { data, error } = await supabase.from("letters").select("*");
-          if (!error && data && data.length > 0) {
-            setLetters(data as Letter[]);
-            return;
-          }
-        }
-        setLetters(DEFAULT_LETTERS);
-      } catch (error) {
-        console.warn("Using default letters:", error);
-        setLetters(DEFAULT_LETTERS);
+        setLoading(true);
+        const fetched = await getAllLetters();
+        setLetters(fetched);
+      } catch (err) {
+        console.warn("Failed to load all letters:", err);
       } finally {
         setLoading(false);
       }
     }
-    
-    fetchLetters();
+    load();
+
+    const handleUpdated = () => {
+      const refreshed = getLettersSync();
+      setLetters(refreshed);
+      // Update selected letter if it was currently viewed
+      setSelectedLetter((prev) => {
+        if (!prev) return null;
+        return refreshed.find((l) => l.id === prev.id) || null;
+      });
+    };
+
+    window.addEventListener(LETTERS_UPDATED_EVENT, handleUpdated);
+    return () => {
+      window.removeEventListener(LETTERS_UPDATED_EVENT, handleUpdated);
+    };
   }, []);
 
   const today = new Date();
+
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  }
+
+  function handleOpenWriteModal(letterToEdit?: LetterItem) {
+    setLetterBeingEdited(letterToEdit || null);
+    setIsWriteModalOpen(true);
+  }
+
+  function handleLetterSaved(saved: LetterItem) {
+    showToast(`Letter "${saved.title}" saved successfully!`);
+  }
+
+  function handleLetterDeleted() {
+    showToast("Letter deleted.");
+    if (selectedLetter && selectedLetter.id === letterBeingEdited?.id) {
+      setSelectedLetter(null);
+    }
+  }
+
+  async function handleResetDefaults() {
+    const confirmReset = window.confirm("Reset all letters back to original default letters?");
+    if (!confirmReset) return;
+    await resetLettersToDefault();
+    showToast("Letters reset to original default.");
+    setSelectedLetter(null);
+  }
 
   return (
     <div className="min-h-screen bg-[#F3F8FC] text-slate-900 pb-32">
@@ -110,26 +124,63 @@ export default function Letters() {
         </Link>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 pt-12 pb-16">
+      {/* Floating Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 border border-slate-700 font-medium"
+          >
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <main className="max-w-3xl mx-auto px-6 pt-10 pb-16">
+        {/* Banner Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-10"
         >
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600">
+            <div className="w-12 h-12 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600 shadow-xs">
               <MailOpen className="w-6 h-6 text-sky-600" />
             </div>
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl mb-2 text-slate-900">Sealed Letters</h1>
-          <p className="text-xs sm:text-sm tracking-widest uppercase text-sky-800/60 font-mono">
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-sky-800/60 font-mono mb-6">
             Words saved for the right moment • Our Ohana chronicle
           </p>
+
+          {/* Action Row: Write Letter + Reset */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              onClick={() => handleOpenWriteModal()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white font-semibold text-xs tracking-wide shadow-md shadow-sky-500/20 hover:shadow-lg hover:shadow-sky-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <Feather className="w-4 h-4" />
+              <span>Write a Letter (In Your Own Words)</span>
+            </button>
+
+            <button
+              onClick={handleResetDefaults}
+              title="Reset to default letters"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-sky-200/80 bg-white text-sky-700 hover:bg-sky-50 text-[11px] font-semibold transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-sky-500" />
+              <span>Reset Defaults</span>
+            </button>
+          </div>
         </motion.div>
 
         {selectedLetter ? (
+          /* Opened Letter Reading Experience */
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-sky-100 relative overflow-hidden"
           >
@@ -144,12 +195,22 @@ export default function Letters() {
                 &larr; Back to Letters
               </button>
 
-              <span className="text-[10px] font-mono tracking-wider uppercase bg-sky-100 text-sky-800 px-3 py-1 rounded-full font-semibold">
-                {selectedLetter.theme_tag || "Ohana"}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenWriteModal(selectedLetter)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/60 flex items-center gap-1.5 transition"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Edit in My Own Words</span>
+                </button>
+
+                <span className="text-[10px] font-mono tracking-wider uppercase bg-sky-100 text-sky-800 px-3 py-1 rounded-full font-semibold">
+                  {selectedLetter.theme_tag || "Ohana"}
+                </span>
+              </div>
             </div>
 
-            <h2 className="font-serif text-2xl sm:text-3xl mb-8 text-center text-slate-900">
+            <h2 className="font-serif text-2xl sm:text-3xl mb-8 text-center text-slate-900 leading-snug">
               {selectedLetter.title}
             </h2>
 
@@ -157,66 +218,150 @@ export default function Letters() {
               {selectedLetter.content}
             </div>
 
-            <div className="mt-14 pt-6 border-t border-sky-50 text-center text-xs font-mono uppercase tracking-widest text-sky-600">
-              Unlocked for you • {selectedLetter.unlock_date}
+            <div className="mt-14 pt-6 border-t border-sky-50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono uppercase tracking-widest text-sky-600">
+              <div>
+                Unlocked for you • {selectedLetter.unlock_date}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleOpenWriteModal(selectedLetter)}
+                  className="text-sky-700 hover:text-sky-900 font-sans font-semibold normal-case text-xs underline"
+                >
+                  Edit this letter
+                </button>
+                <button
+                  onClick={() => setSelectedLetter(null)}
+                  className="text-slate-400 hover:text-slate-600 font-sans normal-case text-xs"
+                >
+                  Close Letter
+                </button>
+              </div>
             </div>
           </motion.div>
         ) : (
+          /* Cards Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {loading ? (
+            {loading && letters.length === 0 ? (
               <div className="animate-pulse col-span-full space-y-4">
                 <div className="h-32 bg-sky-100/50 rounded-2xl w-full"></div>
                 <div className="h-32 bg-sky-100/50 rounded-2xl w-full"></div>
               </div>
             ) : letters.map((letter, index) => {
               const unlockDate = new Date(letter.unlock_date);
-              const isLocked = today < unlockDate;
+              const isLocked = !isNaN(unlockDate.getTime()) && today < unlockDate;
 
               return (
                 <motion.div
                   key={letter.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => {
-                    if (!isLocked) setSelectedLetter(letter);
-                  }}
-                  className={`relative overflow-hidden rounded-3xl p-7 border transition-all duration-300 ${
+                  transition={{ delay: index * 0.08 }}
+                  className={`relative overflow-hidden rounded-3xl p-7 border transition-all duration-300 flex flex-col justify-between ${
                     isLocked 
-                      ? 'bg-slate-50/70 border-slate-200/80 opacity-70 cursor-not-allowed' 
-                      : 'bg-white border-sky-100 hover:border-sky-300 hover:shadow-lg hover:shadow-sky-500/10 cursor-pointer group'
+                      ? 'bg-slate-50/80 border-slate-200/80' 
+                      : 'bg-white border-sky-100 hover:border-sky-300 hover:shadow-lg hover:shadow-sky-500/10 group'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-5">
-                    <div className={`p-3 rounded-2xl ${
-                      isLocked ? "bg-slate-100 text-slate-400" : "bg-sky-50 text-sky-600 group-hover:bg-sky-100 transition-colors"
-                    }`}>
-                      {isLocked ? <Lock className="w-5 h-5" /> : <MailOpen className="w-5 h-5" />}
+                  <div>
+                    {/* Top Row */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className={`p-3 rounded-2xl ${
+                        isLocked ? "bg-slate-100 text-slate-400" : "bg-sky-50 text-sky-600 group-hover:bg-sky-100 transition-colors"
+                      }`}>
+                        {isLocked ? <Lock className="w-5 h-5" /> : <MailOpen className="w-5 h-5" />}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold ${
+                          isLocked ? "bg-slate-100 text-slate-400" : "bg-sky-100 text-sky-800"
+                        }`}>
+                          {isLocked ? `Unlocks ${letter.unlock_date}` : 'Open to Read'}
+                        </span>
+
+                        {/* Edit Button directly on card */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenWriteModal(letter);
+                          }}
+                          title="Edit this letter in your own words"
+                          className="p-1.5 rounded-full text-slate-400 hover:text-sky-700 hover:bg-sky-100 transition-colors"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
-                    <span className={`text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full font-semibold ${
-                      isLocked ? "bg-slate-100 text-slate-400" : "bg-sky-100 text-sky-800"
-                    }`}>
-                      {isLocked ? `Unlocks ${letter.unlock_date}` : 'Open to Read'}
-                    </span>
+                    <h3 
+                      onClick={() => {
+                        if (!isLocked) setSelectedLetter(letter);
+                      }}
+                      className={`font-serif text-lg sm:text-xl mb-2 cursor-pointer ${
+                        isLocked 
+                          ? 'text-slate-500 hover:text-slate-700' 
+                          : 'text-slate-900 group-hover:text-sky-900'
+                      }`}
+                    >
+                      {letter.title}
+                    </h3>
+
+                    {letter.theme_tag && (
+                      <div className="mt-2 flex items-center gap-1 text-[11px] text-sky-600/80 font-sans">
+                        <Heart className="w-3 h-3 text-sky-400 fill-sky-200" />
+                        <span>{letter.theme_tag}</span>
+                      </div>
+                    )}
                   </div>
 
-                  <h3 className={`font-serif text-lg sm:text-xl mb-2 ${isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-sky-900'}`}>
-                    {letter.title}
-                  </h3>
-
-                  {letter.theme_tag && (
-                    <div className="mt-3 flex items-center gap-1 text-[11px] text-sky-600/80 font-sans">
-                      <Heart className="w-3 h-3 text-sky-400 fill-sky-200" />
-                      <span>{letter.theme_tag}</span>
-                    </div>
-                  )}
+                  {/* Card Bottom CTA */}
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    {isLocked ? (
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[11px] text-slate-400 italic">
+                          Sealed until {letter.unlock_date}
+                        </span>
+                        <button
+                          onClick={() => handleOpenWriteModal(letter)}
+                          className="text-[11px] text-sky-600 hover:underline font-medium"
+                        >
+                          Edit words &rarr;
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between w-full">
+                        <button
+                          onClick={() => setSelectedLetter(letter)}
+                          className="text-xs font-semibold text-sky-700 group-hover:text-sky-900 hover:underline flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Read Letter &rarr;</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenWriteModal(letter)}
+                          className="text-xs text-slate-400 hover:text-sky-700 font-medium"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               );
             })}
           </div>
         )}
       </main>
+
+      {/* Write / Edit Letter Modal */}
+      <WriteLetterModal
+        isOpen={isWriteModalOpen}
+        onClose={() => setIsWriteModalOpen(false)}
+        letterToEdit={letterBeingEdited}
+        onSaved={handleLetterSaved}
+        onDeleted={handleLetterDeleted}
+      />
 
       {/* Floating Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-sky-100/80 px-4 py-3 sm:py-3.5 z-40 shadow-sm">

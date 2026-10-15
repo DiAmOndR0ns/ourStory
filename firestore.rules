@@ -59,10 +59,13 @@ service cloud.firestore {
     
     function isValidLetter(data) {
       return data.keys().hasAll(['title', 'content', 'unlock_date'])
-        && data.title is string && data.title.size() <= 100
-        && data.content is string && data.content.size() <= 10000
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 20000
         && data.unlock_date is string && data.unlock_date.size() <= 100
-        && (!('chapter_id' in data) || (data.chapter_id is string && data.chapter_id.size() <= 128));
+        && (!('chapter_id' in data) || (data.chapter_id is string && data.chapter_id.size() <= 128))
+        && (!('theme_tag' in data) || (data.theme_tag is string && data.theme_tag.size() <= 100))
+        && (!('created_at' in data) || (data.created_at is string && data.created_at.size() <= 100))
+        && (!('is_custom' in data) || (data.is_custom is bool));
     }
     
     function isValidMilestone(data) {
@@ -122,10 +125,9 @@ service cloud.firestore {
     }
 
     match /letters/{letterId} {
-      allow read: if true; // We will enforce time-unlock visually in the UI, or technically we could do it in rules but time is tricky.
-      allow create: if isAdmin() && isValidId(letterId) && isValidLetter(incoming());
-      allow update: if isAdmin() && isValidId(letterId) && isValidLetter(incoming());
-      allow delete: if isAdmin() && isValidId(letterId);
+      allow read: if true; // Public read for the story letters
+      allow create, update: if isValidId(letterId) && isValidLetter(incoming());
+      allow delete: if isValidId(letterId);
     }
 
     match /milestones/{milestoneId} {

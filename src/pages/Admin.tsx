@@ -23,10 +23,14 @@ import {
   HelpCircle,
   Lock,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  MailOpen,
+  Feather,
+  Edit3
 } from "lucide-react";
 import MediaUploader, { UploadedMediaResult } from "../components/MediaUploader";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import WriteLetterModal from "../components/WriteLetterModal";
 import { DEFAULT_CHAPTERS } from "../data/defaultStoryData";
 import { 
   saveNewMemory, 
@@ -36,13 +40,19 @@ import {
   getDeletedMemoryIds 
 } from "../lib/memoriesService";
 import { 
+  getAllLetters, 
+  deleteLetter, 
+  resetLettersToDefault, 
+  LETTERS_UPDATED_EVENT 
+} from "../lib/lettersService";
+import { 
   supabase, 
   isSupabaseConfigured, 
   getSupabaseConfig, 
   saveSupabaseConfig, 
   SUPABASE_SETUP_SQL 
 } from "../lib/supabase";
-import { MemoryItem } from "../types";
+import { MemoryItem, LetterItem } from "../types";
 
 interface AdminMediaRecord {
   id: string;
@@ -60,7 +70,13 @@ export default function Admin() {
   const [passcode, setPasscode] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"upload" | "media" | "memories" | "chapters" | "supabase">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "media" | "memories" | "chapters" | "supabase" | "letters">("upload");
+
+  // Letters Management State
+  const [lettersList, setLettersList] = useState<LetterItem[]>([]);
+  const [loadingLetters, setLoadingLetters] = useState(false);
+  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+  const [letterBeingEdited, setLetterBeingEdited] = useState<LetterItem | null>(null);
 
   // Upload Staging
   const [stagedMedia, setStagedMedia] = useState<UploadedMediaResult | null>(null);
@@ -107,23 +123,28 @@ export default function Admin() {
     if (savedSession === "true") {
       loadMediaRecords();
       loadAllMemoriesList();
+      loadAllLettersList();
     }
 
     const handleUpdate = () => {
       loadAllMemoriesList();
       loadMediaRecords();
+      loadAllLettersList();
     };
     window.addEventListener("love_story_memories_updated", handleUpdate);
     window.addEventListener("supabase_media_uploaded", loadMediaRecords);
+    window.addEventListener(LETTERS_UPDATED_EVENT, loadAllLettersList);
     window.addEventListener("supabase_config_updated", () => {
       setIsConnected(isSupabaseConfigured());
       loadMediaRecords();
       loadAllMemoriesList();
+      loadAllLettersList();
     });
 
     return () => {
       window.removeEventListener("love_story_memories_updated", handleUpdate);
       window.removeEventListener("supabase_media_uploaded", loadMediaRecords);
+      window.removeEventListener(LETTERS_UPDATED_EVENT, loadAllLettersList);
     };
   }, []);
 
@@ -236,6 +257,18 @@ export default function Admin() {
       console.warn("Could not fetch memories:", err);
     } finally {
       setLoadingMemories(false);
+    }
+  };
+
+  const loadAllLettersList = async () => {
+    setLoadingLetters(true);
+    try {
+      const list = await getAllLetters();
+      setLettersList(list);
+    } catch (err) {
+      console.warn("Could not fetch letters:", err);
+    } finally {
+      setLoadingLetters(false);
     }
   };
 
@@ -525,6 +558,21 @@ export default function Admin() {
           >
             <Layers className="w-3.5 h-3.5" />
             Chapters ({DEFAULT_CHAPTERS.length})
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab("letters");
+              loadAllLettersList();
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === "letters"
+                ? "bg-sky-600 text-white shadow-xs"
+                : "text-stone-500 hover:text-stone-900 hover:bg-stone-100"
+            }`}
+          >
+            <MailOpen className="w-3.5 h-3.5" />
+            Letters ({lettersList.length})
           </button>
 
           <button
@@ -1040,7 +1088,142 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* TAB: LETTERS MANAGEMENT */}
+        {activeTab === "letters" && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-sky-600 mb-1">
+                  <MailOpen className="w-4 h-4" />
+                  <span className="text-[11px] font-mono uppercase tracking-wider font-semibold">Anniversary Letters</span>
+                </div>
+                <h2 className="font-serif text-2xl text-stone-900">Letters in Your Own Words</h2>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Write, edit, and schedule sealed letters for your love to unlock.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLetterBeingEdited(null);
+                    setIsWriteModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white rounded-xl text-xs font-semibold tracking-wide flex items-center gap-2 shadow-xs cursor-pointer transition"
+                >
+                  <Feather className="w-4 h-4" />
+                  <span>+ Write a Letter</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm("Reset all letters back to original default letters?")) {
+                      await resetLettersToDefault();
+                      loadAllLettersList();
+                    }
+                  }}
+                  className="px-3.5 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-stone-500" />
+                  <span>Reset Defaults</span>
+                </button>
+              </div>
+            </div>
+
+            {loadingLetters && lettersList.length === 0 ? (
+              <div className="p-8 text-center text-stone-400 text-xs">Loading letters...</div>
+            ) : lettersList.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-stone-200 text-stone-500">
+                <MailOpen className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+                <p className="text-sm font-medium">No letters yet.</p>
+                <button
+                  onClick={() => {
+                    setLetterBeingEdited(null);
+                    setIsWriteModalOpen(true);
+                  }}
+                  className="mt-3 text-xs text-sky-600 font-semibold underline"
+                >
+                  Write your first letter now
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {lettersList.map((letter) => (
+                  <div
+                    key={letter.id}
+                    className="bg-white p-6 rounded-3xl border border-stone-200/90 shadow-xs flex flex-col justify-between hover:border-sky-300 transition"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100 font-semibold">
+                          {letter.theme_tag || "From the Heart"}
+                        </span>
+                        <span className="text-[11px] font-mono text-stone-400">
+                          Unlocks: {letter.unlock_date}
+                        </span>
+                      </div>
+
+                      <h3 className="font-serif text-lg font-medium text-stone-900 mb-2">
+                        {letter.title}
+                      </h3>
+
+                      <p className="text-xs text-stone-600 line-clamp-3 leading-relaxed whitespace-pre-wrap font-serif">
+                        {letter.content}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between">
+                      <span className="text-[11px] text-stone-400 font-mono">
+                        {letter.content.split(/\s+/).filter(Boolean).length} words
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLetterBeingEdited(letter);
+                            setIsWriteModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`Delete letter "${letter.title}"?`)) {
+                              await deleteLetter(letter.id);
+                              loadAllLettersList();
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Write / Edit Letter Modal */}
+      <WriteLetterModal
+        isOpen={isWriteModalOpen}
+        onClose={() => setIsWriteModalOpen(false)}
+        letterToEdit={letterBeingEdited}
+        onSaved={() => loadAllLettersList()}
+        onDeleted={() => loadAllLettersList()}
+      />
 
       {/* Delete Memory Confirmation Modal */}
       <DeleteConfirmModal

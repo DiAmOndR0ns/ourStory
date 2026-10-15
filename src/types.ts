@@ -36,3 +36,15 @@ export interface ChapterItem {
   cover_image?: string;
   highlight_count?: number;
 }
+
+export interface LetterItem {
+  id: string;
+  title: string;
+  content: string;
+  unlock_date: string;
+  theme_tag?: string;
+  chapter_id?: string;
+  created_at?: string;
+  is_custom?: boolean;
+}
+
